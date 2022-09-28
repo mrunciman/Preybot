@@ -10,6 +10,14 @@ float encAngle = 0.0;
 byte encAngleLSBs = 0;
 byte encAngleMSBs = 0;
 
+
+union pos_from_mega{
+  uint8_t posBytes[4];
+  float posFloat;
+}
+
+pos_from_mega posFromMega;
+
 volatile boolean process_it = false;
 
 uStepperS stepper;
@@ -27,7 +35,7 @@ void setup(void)
   stepper.setMaxVelocity(800);          //Max velocity of 800 fullsteps/s
   
   stepper.checkOrientation(5.0);       //Check orientation of motor connector with +/- 30 microsteps movement
-  stepper.setControlThreshold(15);		//Adjust the control threshold - here set to 15 microsteps before making corrective action
+  stepper.setControlThreshold(15);    //Adjust the control threshold - here set to 15 microsteps before making corrective action
 
   stepper.moveSteps(51200);                 //Turn shaft 51200 steps, counterClockWise (equal to one revolution with the TMC native 1/256 microstepping)
 
@@ -69,6 +77,7 @@ void loop(void)
 //    Serial.println(c, DEC);
 //    Serial.println(encAngle);
     encAngle = byte(stepper.encoder.getAngleMoved());
+    posFromMega.posFloat = stepper.encoder.getAngleMoved();
   }
   
     if (process_it){
