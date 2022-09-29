@@ -61,6 +61,7 @@ void setup() {
   Serial.begin(115200);
   
   // set the peripheral select pins as output:
+  pinMode(SS, OUTPUT);
   pinMode(p0SelectPin, OUTPUT);
   pinMode(p1SelectPin, OUTPUT);
   digitalWrite(p0SelectPin, HIGH);
@@ -134,7 +135,7 @@ void stepperWriteX(){
 
 
 void stepperWriteY(){
-  SPI.beginTransaction(settings0);
+  SPI.beginTransaction(settings0); // remove?
   // take the select pin low to select the chip:
   digitalWrite(p1SelectPin, LOW);
 
@@ -174,7 +175,7 @@ void loop() {
   
   // Send desired positions to steppers
   // and read realX and realY from respective enclosures
-//  stepperWriteX();
+  stepperWriteX();
   stepperWriteY();
   Serial.print("X: ");
   Serial.println(posEncX.posFloat);

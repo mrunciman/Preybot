@@ -1,0 +1,4 @@
+{
+    "board": "uStepper:avr:uStepperS",
+    "sketch": "uStepper_SPI.ino"
+}

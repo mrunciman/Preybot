@@ -49,13 +49,17 @@ void setup(void)
   ///////////////////////////////////////////
   // have to send on controller in, *peripheral out*
   pinMode(MISO, OUTPUT);
+  pinMode(SS, INPUT);
   pinMode(SS_Pin, INPUT);
   
   // turn on SPI in peripheral mode
-  SPCR |= bit(SPE);
+  SPCR0 = (1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(0<<CPOL0)|(0<<CPHA0)|(0<<SPR01)|(1<<SPR00);
+  // SPCR0 |= bit(SPE0);
   
-  // turn on interrupts
-  SPCR |= bit(SPIE);
+  // // turn on interrupts
+  // SPCR0 |= bit(SPIE0);
+
+  // SPCR0 &= ~bit(MSTR0);
   Serial.println("Here");
 }
 
