@@ -1,34 +1,42 @@
 
 #include <uStepperS.h>
-// include the SPI library:
-#include <SPI.h>
-//#include "pins_arduino.h"
-
-byte posFromMegaLSB = 0;
-byte posFromMegaMSB = 0;
-float encAngle = 0.0;
-byte encAngleLSBs = 0;
-byte encAngleMSBs = 0;
-
-
-union pos_from_mega{
-  uint8_t posBytes[4];
-  float posFloat;
-}
-
-pos_from_mega posFromMega;
-
-volatile boolean process_it = false;
-
 uStepperS stepper;
 
-int SS_Pin = 7;
+// include the SPI library:
+#include <SPI.h>
+
+int SS_Pin = 3;
+
+union pos_data{
+  volatile float posFloat;
+  volatile uint8_t posBytes[4];
+};
+
+pos_data posEncoder;
+pos_data posFromMega;
+
+volatile int posIndex = 0;
+volatile byte lastByte = 0;
+
+
+char buf [100];
+volatile byte pos;
+volatile boolean process_it = false;
 
 
 void setup(void)
 {
   Serial.begin(115200);
   stepper.setup(CLOSEDLOOP,200);     //Initiate the stepper object to use closed loop control with 200 steps per revolution motor - i.e. 1.8 deg stepper 
+  // Initialise data structures
+  posEncoder.posFloat = 655.4; //stepper.encoder.getAngleMoved();
+  Serial.println(posEncoder.posFloat);
+  Serial.println(posEncoder.posBytes[0], DEC);
+  Serial.println(posEncoder.posBytes[1], DEC);
+  Serial.println(posEncoder.posBytes[2], DEC);
+  Serial.println(posEncoder.posBytes[3], DEC);
+  posFromMega.posFloat = 0.0;
+
   
   // For the closed loop position control the acceleration and velocity parameters define the response of the control:
   stepper.setMaxAcceleration(2000);     //use an acceleration of 2000 fullsteps/s^2
@@ -41,46 +49,64 @@ void setup(void)
 
 
   ///////////////////////////////////////////
-  // have to send on master in, *slave out*
+  // have to send on controller in, *peripheral out*
   pinMode(MISO, OUTPUT);
   pinMode(SS_Pin, INPUT);
   
-  // turn on SPI in slave mode
-  SPCR |= _BV(SPE);
-//  SPCR = (0<<CPOL)|(0<<CPHA); // SPI on
-//  SPCR = (1<<SPE)|(0<<DORD)|(0<<MSTR)|(0<<CPOL)|(0<<CPHA)|(0<<SPR1)|(1<<SPR0); // SPI on
+  // turn on SPI in peripheral mode
+  SPCR |= bit(SPE);
   
   // turn on interrupts
-  //  SPCR |= _BV(SPIE);
-  // now turn on interrupts
-  SPI.attachInterrupt();
-
+  SPCR |= bit(SPIE);
+  Serial.println("Here");
 }
 
 
 // SPI interrupt routine
 ISR (SPI_STC_vect){
-  //Read PSI buffer
-  posFromMegaMSB = SPDR;
-  //  Send to Controller
-  SPDR = encAngle;
-  process_it = true;
-}
 
+  // Check index
+  if (posIndex >= 4){
+    lastByte = SPDR;
+    posIndex = 0;
+    process_it = true;
+  }
+  else{
+    //Read byte from SPI buffer
+    posFromMega.posBytes[posIndex] = SPDR;
+    // Write encoder value to buffer
+    SPDR = posEncoder.posBytes[posIndex];
+    posIndex++;
+  }
 
+//  byte c = SPDR;
+  // MODIFY TO READ ONLY FOUR, PLUS FIFTH END BYTE
+  // add to local buffer variable if room
+//  if (pos < (sizeof (buf) - 1)){
+//    buf [pos++] = c;
+//  }
+
+}// end of SPI interrupt routine
 
 
 void loop(void)
 {
-//  Serial.println(stepper.encoder.getAngleMoved());    //Print out the current angle of the motor shaft.
-  if (digitalRead(SS_Pin) == HIGH){
-//    Serial.println(c, DEC);
-//    Serial.println(encAngle);
-    encAngle = byte(stepper.encoder.getAngleMoved());
-    posFromMega.posFloat = stepper.encoder.getAngleMoved();
+//  if (digitalRead(SS_Pin) == HIGH){
+//    posEncoder.posFloat = stepper.encoder.getAngleMoved();
+//  }
+
+  // If end byte was received, process data
+  if (process_it){
+    Serial.println(posFromMega.posFloat);
+    Serial.println(posEncoder.posFloat);
+//    Serial.println(posEncoder.posBytes[0], DEC);
+//    Serial.println(posEncoder.posBytes[1], DEC);
+//    Serial.println(posEncoder.posBytes[2], DEC);
+//    Serial.println(posEncoder.posBytes[3], DEC);
+    // Truncate received data up to pos
+    buf[pos] = 0;
+    pos = 0;
+    posEncoder.posFloat = stepper.encoder.getAngleMoved();
+    process_it = false;
   }
-  
-    if (process_it){
-      process_it = false;
-    }  // end of flag set
 }

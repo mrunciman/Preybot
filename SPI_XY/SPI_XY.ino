@@ -28,6 +28,18 @@ const int p1SelectPin = 53;
 
 ////////////////////////////////////////////////////////
 // uStepper setup
+
+
+union pos_data{
+  float posFloat;
+  uint8_t posBytes[4];
+};
+pos_data posEncX;
+pos_data posEncY;
+pos_data posToX;
+pos_data posToY;
+byte lastByte = 0;
+
 int posX = 0;
 int posY = 0;
 char charX = posX;
@@ -61,6 +73,11 @@ void setup() {
   // initialize SPI:
   SPI.begin();
 //  SPI1.begin();
+
+  posToX.posFloat = 0.0;
+  posToY.posFloat = 50.0;
+  posEncX.posFloat = 0.0;
+  posEncY.posFloat = 0.0;
 }
 
 
@@ -93,17 +110,33 @@ void stepperWriteX(int x_pos) {
 }
 
 
-byte stepperWriteY(byte y_pos){
+void stepperWriteY(){
   SPI.beginTransaction(settings0);
   // take the select pin low to select the chip:
   digitalWrite(p1SelectPin, LOW);
-  // send two bytes via SPI:
-  realY = SPI.transfer(y_pos);
-  delayMicroseconds (20);
+
+  //Send first byte and receive what we last sent discarded
+//  posEncY.posBytes[0] = 0;
+  SPI.transfer(posToY.posBytes[0]);;
+  for (int i = 0; i < 4; i++){
+    if (i < 3){
+      // Send bytes 2 - 4 and receive bytes 1 -3
+      posEncY.posBytes[i] = SPI.transfer(posToY.posBytes[i+1]);
+    }
+    else if (i == 3){
+      // Send placeholder last byte and receive byte 4
+      posEncY.posBytes[i] = SPI.transfer(lastByte);
+    }
+    delayMicroseconds (20);
+  }
+  
+  // send byte via SPI:
+//  realY = SPI.transfer(y_pos);
+//  delayMicroseconds (20);
   // take the select pin high to de-select the chip:
   digitalWrite(p1SelectPin, HIGH);
   SPI.endTransaction;
-  return(realY);
+//  return(realY);
 //  y_pos = y_pos +1;
 }
 
@@ -122,9 +155,15 @@ void loop() {
   joyMap();
   // Send desired positions to steppers
   // and read realX and realY from respective enclosures
-  charY = 50;
+//  charY = 50;
 //  stepperWriteX(charX);
-  realY = stepperWriteY(charY);
-  Serial.println(realY, DEC);
+  stepperWriteY();
+  posToY.posFloat = 50.00;
+  Serial.println(posEncY.posFloat);
+//  Serial.println(posEncY.posBytes[0], DEC);
+//  Serial.println(posEncY.posBytes[1], DEC);
+//  Serial.println(posEncY.posBytes[2], DEC);
+//  Serial.println(posEncY.posBytes[3], DEC);
+  delay(50);
 
 }
