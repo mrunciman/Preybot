@@ -18,8 +18,7 @@
 ///////////////////////////////////////////////////////
 // include the SPI library:
 #include <SPI.h>
-//#include <SPI1.h>
-SPISettings settings0(4000000, MSBFIRST, SPI_MODE0);  // At 16 = SPI Clock = 8MHz.
+SPISettings settings0(2000000, MSBFIRST, SPI_MODE0);  // At 16 = SPI Clock = 8MHz.
 
 // set pin 10 as the slave select for the X axis, 20 for Y axis
 const int p0SelectPin = 10;
@@ -29,6 +28,12 @@ const int p1SelectPin = 53;
 ////////////////////////////////////////////////////////
 // uStepper setup
 
+int posX = 0;
+int posY = 0;
+char charX = posX;
+char charY = posY; // Ensures that messages are null terminated
+int realX = 0;
+byte realY = 0;
 
 union pos_data{
   float posFloat;
@@ -39,13 +44,6 @@ pos_data posEncY;
 pos_data posToX;
 pos_data posToY;
 byte lastByte = 0;
-
-int posX = 0;
-int posY = 0;
-char charX = posX;
-char charY = posY; // Ensures that messages are null terminated
-int realX = 0;
-byte realY = 0;
 
 
 ////////////////////////////////////////////////////////
@@ -65,6 +63,8 @@ void setup() {
   // set the peripheral select pins as output:
   pinMode(p0SelectPin, OUTPUT);
   pinMode(p1SelectPin, OUTPUT);
+  digitalWrite(p0SelectPin, HIGH);
+  digitalWrite(p1SelectPin, HIGH);
 
   pinMode(joyPinX, INPUT);
   pinMode(joyPinY, INPUT);
@@ -72,9 +72,8 @@ void setup() {
   
   // initialize SPI:
   SPI.begin();
-//  SPI1.begin();
 
-  posToX.posFloat = 0.0;
+  posToX.posFloat = 25.0;
   posToY.posFloat = 50.0;
   posEncX.posFloat = 0.0;
   posEncY.posFloat = 0.0;
@@ -98,12 +97,36 @@ void joyMap(){
 }
 
 
-void stepperWriteX(int x_pos) {
+//void stepperWriteX(int x_pos) {
+//  SPI.beginTransaction(settings0);
+//  // take the select pin low to select the chip:
+//  digitalWrite(p0SelectPin, LOW);
+//  // send two bytes via SPI:
+//  realX = SPI.transfer(x_pos);
+//  // take the select pin high to de-select the chip:
+//  digitalWrite(p0SelectPin, HIGH);
+//  SPI.endTransaction;
+//}
+
+void stepperWriteX(){
   SPI.beginTransaction(settings0);
   // take the select pin low to select the chip:
   digitalWrite(p0SelectPin, LOW);
-  // send two bytes via SPI:
-  realX = SPI.transfer(x_pos);
+
+  //Send first byte and discard last byte that was sent (lastByte)
+  SPI.transfer(posToX.posBytes[0]);
+  for (int i = 0; i < 4; i++){
+    if (i < 3){
+      // Send bytes 2 - 4 and receive bytes 1 -3
+      posEncX.posBytes[i] = SPI.transfer(posToX.posBytes[i+1]);
+    }
+    else if (i == 3){
+      // Send placeholder last byte and receive byte 4
+      posEncX.posBytes[i] = SPI.transfer(lastByte);
+    }
+    delayMicroseconds (20);
+  }
+  
   // take the select pin high to de-select the chip:
   digitalWrite(p0SelectPin, HIGH);
   SPI.endTransaction;
@@ -117,7 +140,7 @@ void stepperWriteY(){
 
   //Send first byte and receive what we last sent discarded
 //  posEncY.posBytes[0] = 0;
-  SPI.transfer(posToY.posBytes[0]);;
+  SPI.transfer(posToY.posBytes[0]);
   for (int i = 0; i < 4; i++){
     if (i < 3){
       // Send bytes 2 - 4 and receive bytes 1 -3
@@ -130,14 +153,9 @@ void stepperWriteY(){
     delayMicroseconds (20);
   }
   
-  // send byte via SPI:
-//  realY = SPI.transfer(y_pos);
-//  delayMicroseconds (20);
   // take the select pin high to de-select the chip:
   digitalWrite(p1SelectPin, HIGH);
   SPI.endTransaction;
-//  return(realY);
-//  y_pos = y_pos +1;
 }
 
 
@@ -153,17 +171,17 @@ void loop() {
 //  Serial.println(joyValueX);
   // Map joystick to XY plane
   joyMap();
+  
   // Send desired positions to steppers
   // and read realX and realY from respective enclosures
-//  charY = 50;
-//  stepperWriteX(charX);
+//  stepperWriteX();
   stepperWriteY();
-  posToY.posFloat = 50.00;
+  Serial.print("X: ");
+  Serial.println(posEncX.posFloat);
+  Serial.print("Y: ");
   Serial.println(posEncY.posFloat);
-//  Serial.println(posEncY.posBytes[0], DEC);
-//  Serial.println(posEncY.posBytes[1], DEC);
-//  Serial.println(posEncY.posBytes[2], DEC);
-//  Serial.println(posEncY.posBytes[3], DEC);
-  delay(50);
+  Serial.println();
+  
+  delay(100);
 
 }

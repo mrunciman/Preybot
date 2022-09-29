@@ -19,8 +19,6 @@ volatile int posIndex = 0;
 volatile byte lastByte = 0;
 
 
-char buf [100];
-volatile byte pos;
 volatile boolean process_it = false;
 
 
@@ -65,26 +63,22 @@ void setup(void)
 // SPI interrupt routine
 ISR (SPI_STC_vect){
 
-  // Check index
-  if (posIndex >= 4){
-    lastByte = SPDR;
-    posIndex = 0;
-    process_it = true;
+  if (digitalRead(SS_Pin) == LOW){
+  
+    // Check index
+    if (posIndex >= 4){
+      lastByte = SPDR;
+      posIndex = 0;
+      process_it = true;
+    }
+    else{
+      //Read byte from SPI buffer
+      posFromMega.posBytes[posIndex] = SPDR;
+      // Write encoder value to buffer
+      SPDR = posEncoder.posBytes[posIndex];
+      posIndex++;
+    }
   }
-  else{
-    //Read byte from SPI buffer
-    posFromMega.posBytes[posIndex] = SPDR;
-    // Write encoder value to buffer
-    SPDR = posEncoder.posBytes[posIndex];
-    posIndex++;
-  }
-
-//  byte c = SPDR;
-  // MODIFY TO READ ONLY FOUR, PLUS FIFTH END BYTE
-  // add to local buffer variable if room
-//  if (pos < (sizeof (buf) - 1)){
-//    buf [pos++] = c;
-//  }
 
 }// end of SPI interrupt routine
 
@@ -98,14 +92,8 @@ void loop(void)
   // If end byte was received, process data
   if (process_it){
     Serial.println(posFromMega.posFloat);
-    Serial.println(posEncoder.posFloat);
-//    Serial.println(posEncoder.posBytes[0], DEC);
-//    Serial.println(posEncoder.posBytes[1], DEC);
-//    Serial.println(posEncoder.posBytes[2], DEC);
-//    Serial.println(posEncoder.posBytes[3], DEC);
+    //Serial.println(posEncoder.posFloat);
     // Truncate received data up to pos
-    buf[pos] = 0;
-    pos = 0;
     posEncoder.posFloat = stepper.encoder.getAngleMoved();
     process_it = false;
   }
