@@ -1,28 +1,16 @@
 /*
 
- The circuit:
-  * All A pins  of AD5206 connected to +5V
-  * All B pins of AD5206 connected to ground
-  * An LED and a 220-ohm resisor in series connected from each W pin to ground
-  * CS - to digital pin 10  (SS pin)
-  * SDI - to digital pin 11 (MOSI pin)
-  * CLK - to digital pin 13 (SCK pin)
-
- created 10 Aug 2010
- by Tom Igoe
-
- Thanks to Heather Dewey-Hagborg for the original tutorial, 2005
 
 */
 
 ///////////////////////////////////////////////////////
 // include the SPI library:
 #include <SPI.h>
-SPISettings settings0(2000000, MSBFIRST, SPI_MODE0);  // At 16 = SPI Clock = 8MHz.
+SPISettings settings0(4000000, MSBFIRST, SPI_MODE0);  // At 16 = SPI Clock = 8MHz.
 
 // set pin 10 as the slave select for the X axis, 20 for Y axis
-const int p0SelectPin = 10;
-const int p1SelectPin = 53;
+const int p0SelectPin = 53;
+const int p1SelectPin = 10;
 
 
 ////////////////////////////////////////////////////////
@@ -62,6 +50,7 @@ void setup() {
   
   // set the peripheral select pins as output:
   pinMode(SS, OUTPUT);
+  pinMode(MOSI, OUTPUT);
   pinMode(p0SelectPin, OUTPUT);
   pinMode(p1SelectPin, OUTPUT);
   digitalWrite(p0SelectPin, HIGH);
@@ -73,6 +62,14 @@ void setup() {
   
   // initialize SPI:
   SPI.begin();
+  // Set MOSI and SCK output, all others input
+  // DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK);
+  // Enable SPI, Master, set clock rate fck/4
+//   SPCR = 0; 
+//   SPCR |= (0<<SPIE)|(0<<SPE)|(0<<DORD)|(1<<MSTR)|(0<<CPOL)|(0<<CPHA)|(0<<SPR1)|(0<<SPR0);
+//  SPSR &= ~(0<<SPI2X0);
+  // while(!(SPSR & (1<<SPIF))){;}
+   
 
   posToX.posFloat = 25.0;
   posToY.posFloat = 50.0;
@@ -98,68 +95,61 @@ void joyMap(){
 }
 
 
-//void stepperWriteX(int x_pos) {
-//  SPI.beginTransaction(settings0);
-//  // take the select pin low to select the chip:
-//  digitalWrite(p0SelectPin, LOW);
-//  // send two bytes via SPI:
-//  realX = SPI.transfer(x_pos);
-//  // take the select pin high to de-select the chip:
-//  digitalWrite(p0SelectPin, HIGH);
-//  SPI.endTransaction;
-//}
-
-void stepperWriteX(){
+void stepperWrite(int pinSS, pos_data* outData, pos_data* inData){
   SPI.beginTransaction(settings0);
   // take the select pin low to select the chip:
-  digitalWrite(p0SelectPin, LOW);
+  digitalWrite(pinSS, LOW);
 
   //Send first byte and discard last byte that was sent (lastByte)
-  SPI.transfer(posToX.posBytes[0]);
+  SPI.transfer(outData->posBytes[0]);
+  delayMicroseconds (20);
   for (int i = 0; i < 4; i++){
     if (i < 3){
       // Send bytes 2 - 4 and receive bytes 1 -3
-      posEncX.posBytes[i] = SPI.transfer(posToX.posBytes[i+1]);
+      inData->posBytes[i] = SPI.transfer(outData->posBytes[i+1]);
     }
     else if (i == 3){
       // Send placeholder last byte and receive byte 4
-      posEncX.posBytes[i] = SPI.transfer(lastByte);
+      inData->posBytes[i] = SPI.transfer(lastByte);
     }
+//    Serial.print(i);
+//    Serial.println(inData->posBytes[i], DEC);
     delayMicroseconds (20);
   }
   
   // take the select pin high to de-select the chip:
-  digitalWrite(p0SelectPin, HIGH);
+  digitalWrite(pinSS, HIGH);
   SPI.endTransaction;
 }
 
-
-void stepperWriteY(){
-  SPI.beginTransaction(settings0); // remove?
+/*
+void stepperWrite(int pinSS, union pos_data* outData, union pos_data* inData){
+  SPI.beginTransaction(settings0);
   // take the select pin low to select the chip:
-  digitalWrite(p1SelectPin, LOW);
+  digitalWrite(pinSS, LOW);
 
-  //Send first byte and receive what we last sent discarded
-//  posEncY.posBytes[0] = 0;
-  SPI.transfer(posToY.posBytes[0]);
+  //Send first byte and discard last byte that was sent (lastByte)
+  SPI.transfer(outData.posBytes[0]);
+  delayMicroseconds (20);
   for (int i = 0; i < 4; i++){
     if (i < 3){
       // Send bytes 2 - 4 and receive bytes 1 -3
-      posEncY.posBytes[i] = SPI.transfer(posToY.posBytes[i+1]);
+      inData.posBytes[i] = SPI.transfer(outData.posBytes[i+1]);
     }
     else if (i == 3){
       // Send placeholder last byte and receive byte 4
-      posEncY.posBytes[i] = SPI.transfer(lastByte);
+      inData.posBytes[i] = SPI.transfer(lastByte);
     }
+    Serial.print(i);
+    Serial.println(inData.posBytes[i], DEC);
     delayMicroseconds (20);
   }
   
   // take the select pin high to de-select the chip:
-  digitalWrite(p1SelectPin, HIGH);
+  digitalWrite(pinSS, HIGH);
   SPI.endTransaction;
 }
-
-
+*/
 
 
 ///////////////////////////////////////////////////////////
@@ -175,14 +165,15 @@ void loop() {
   
   // Send desired positions to steppers
   // and read realX and realY from respective enclosures
-  stepperWriteX();
-  stepperWriteY();
+  stepperWrite(p0SelectPin, &posToX, &posEncX);
+  stepperWrite(p1SelectPin, &posToY, &posEncY);
+
   Serial.print("X: ");
   Serial.println(posEncX.posFloat);
   Serial.print("Y: ");
   Serial.println(posEncY.posFloat);
   Serial.println();
   
-  delay(100);
+  delay(1000);
 
 }
