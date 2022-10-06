@@ -9,8 +9,8 @@
 SPISettings settings0(4000000, MSBFIRST, SPI_MODE0);  // At 16 = SPI Clock = 8MHz.
 
 // set pin 10 as the slave select for the X axis, 20 for Y axis
-const int p0SelectPin = 53;
-const int p1SelectPin = 10;
+const int selectPinX = 9;
+const int selectPinY = 10;
 
 
 ////////////////////////////////////////////////////////
@@ -18,20 +18,16 @@ const int p1SelectPin = 10;
 
 int posX = 0;
 int posY = 0;
-char charX = posX;
-char charY = posY; // Ensures that messages are null terminated
-int realX = 0;
-byte realY = 0;
 
 union pos_data{
   float posFloat;
   uint8_t posBytes[4];
 };
-pos_data posEncX;
-pos_data posEncY;
-pos_data posToX;
-pos_data posToY;
-byte lastByte = 0;
+volatile pos_data posEncX;
+volatile pos_data posEncY;
+volatile pos_data posToX;
+volatile pos_data posToY;
+byte lastByte = 255;
 
 
 ////////////////////////////////////////////////////////
@@ -41,6 +37,7 @@ byte lastByte = 0;
 // Joystick also has button
 int joyPinX = A3;
 int joyPinY = A4;
+int joySwitch = 7;
 int joyValueX = 0;
 int joyValueY = 0;
 
@@ -51,27 +48,27 @@ void setup() {
   // set the peripheral select pins as output:
   pinMode(SS, OUTPUT);
   pinMode(MOSI, OUTPUT);
-  pinMode(p0SelectPin, OUTPUT);
-  pinMode(p1SelectPin, OUTPUT);
-  digitalWrite(p0SelectPin, HIGH);
-  digitalWrite(p1SelectPin, HIGH);
+  pinMode(SCK, OUTPUT);
+  pinMode(MISO, INPUT);
+  pinMode(selectPinX, OUTPUT);
+  pinMode(selectPinY, OUTPUT);
+  digitalWrite(selectPinX, HIGH);
+  digitalWrite(selectPinY, HIGH);
 
   pinMode(joyPinX, INPUT);
   pinMode(joyPinY, INPUT);
+  pinMode(joySwitch, INPUT_PULLUP);
 
   
   // initialize SPI:
   SPI.begin();
-  // Set MOSI and SCK output, all others input
-  // DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK);
-  // Enable SPI, Master, set clock rate fck/4
 //   SPCR = 0; 
 //   SPCR |= (0<<SPIE)|(0<<SPE)|(0<<DORD)|(1<<MSTR)|(0<<CPOL)|(0<<CPHA)|(0<<SPR1)|(0<<SPR0);
-//  SPSR &= ~(0<<SPI2X0);
-  // while(!(SPSR & (1<<SPIF))){;}
+//   SPSR &= ~(0<<SPI2X0);
+//   while(!(SPSR & (1<<SPIF))){;}
    
 
-  posToX.posFloat = 25.0;
+  posToX.posFloat = 51.0;
   posToY.posFloat = 50.0;
   posEncX.posFloat = 0.0;
   posEncY.posFloat = 0.0;
@@ -86,12 +83,14 @@ void readJoystick(){
 }
 
 
-void joyMap(){
+void mapJoystick(){
   int mapX = map(joyValueX, 0, 1023, -512, 512);
-  int mapY = map(joyValueX, 0, 1023, -512, 512);
+  int mapY = map(joyValueY, 0, 1023, -512, 512);
 
-  posX = joyValueX;
-  posY = joyValueX;
+  posX = mapX;
+  posY = mapY;
+
+  //TODO: Map these to angles and increment current position
 }
 
 
@@ -99,7 +98,8 @@ void stepperWrite(int pinSS, pos_data* outData, pos_data* inData){
   SPI.beginTransaction(settings0);
   // take the select pin low to select the chip:
   digitalWrite(pinSS, LOW);
-
+  inData->posFloat = 0.0;
+  
   //Send first byte and discard last byte that was sent (lastByte)
   SPI.transfer(outData->posBytes[0]);
   delayMicroseconds (20);
@@ -113,10 +113,10 @@ void stepperWrite(int pinSS, pos_data* outData, pos_data* inData){
       inData->posBytes[i] = SPI.transfer(lastByte);
     }
 //    Serial.print(i);
-//    Serial.println(inData->posBytes[i], DEC);
+//    Serial.println(inData->posBytes[i], BIN);
+//    Serial.println(SPSR, BIN);
     delayMicroseconds (20);
   }
-  
   // take the select pin high to de-select the chip:
   digitalWrite(pinSS, HIGH);
   SPI.endTransaction;
@@ -159,19 +159,22 @@ void loop() {
 
   // Update joyValX and joyValY
   readJoystick();
-//  Serial.println(joyValueX);
   // Map joystick to XY plane
-  joyMap();
+  mapJoystick();
+  Serial.println(digitalRead(joySwitch));
+  Serial.println(posX);
+  Serial.println(posY);
+  Serial.println();
   
   // Send desired positions to steppers
-  // and read realX and realY from respective enclosures
-  stepperWrite(p0SelectPin, &posToX, &posEncX);
-  stepperWrite(p1SelectPin, &posToY, &posEncY);
-
+  stepperWrite(selectPinX, &posToX, &posEncX);
   Serial.print("X: ");
   Serial.println(posEncX.posFloat);
-  Serial.print("Y: ");
+ 
+  stepperWrite(selectPinY, &posToY, &posEncY);
+  Serial.print("Y: ");   
   Serial.println(posEncY.posFloat);
+  
   Serial.println();
   
   delay(1000);
