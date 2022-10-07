@@ -67,9 +67,10 @@ float y_mm    = 0;
 float yaw_deg = 0;
 
 float ball_diameter = 50; // mm
+// arclength = theta(rad)*radius; theta(rad) = arclength/radius = 2*arclength/ball_diameter; theta(rad)*180/pi = 180*2*arclength/(ball_diameter*pi)
 float arc2deg       = 360/(ball_diameter*3.1415);
 
-float cali_x1_pos 	      = 0.0995;
+float cali_x1_pos 	      = 0.0995; // units are mm/sensor
 float cali_x1_neg 	      = 0.1005;
 float cali_x2_pos 	      = 0.0966;
 float cali_x2_neg 	      = 0.0961;
