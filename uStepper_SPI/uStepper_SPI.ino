@@ -5,7 +5,7 @@ uStepperS stepper;
 // include the SPI library:
 //#include <SPI.h>
 
-int SS_Pin = 2;
+const byte SS_Pin = 3;
 
 union pos_data{
   float posFloat;
@@ -26,11 +26,11 @@ volatile boolean process_it = false;
 
 void setup(void)
 {
-//  noInterrupts();
+  noInterrupts();
   Serial.begin(115200);
   stepper.setup(CLOSEDLOOP,200);     //Initiate the stepper object to use closed loop control with 200 steps per revolution motor - i.e. 1.8 deg stepper 
   // Initialise data structures
-  posEncoder.posFloat = 6.60;// stepper.encoder.getAngleMoved();
+  posEncoder.posFloat = 3.14;// stepper.encoder.getAngleMoved();
   Serial.println(posEncoder.posFloat);
   Serial.print(posEncoder.posBytes[0], DEC);
   Serial.print('\t');
@@ -61,14 +61,14 @@ void setup(void)
   // have to send on controller in, peripheral out
   pinMode(MISO0, OUTPUT);
   pinMode(SS0, INPUT);
-//  pinMode(SCK0, INPUT);
+  pinMode(SCK0, INPUT);
   pinMode(SS_Pin, INPUT);
   
   // turn on SPI in peripheral mode
   SPCR0 = 0;
   SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(0<<CPOL0)|(0<<CPHA0)|(0<<SPR01)|(1<<SPR00);
   SPSR0 &= ~(0<<SPI2X0);
-
+  interrupts();
   attachInterrupt(digitalPinToInterrupt(SS_Pin), ss_falling, FALLING);
 
 }
@@ -80,6 +80,10 @@ void ss_falling(){
 
 // SPI interrupt routine
 ISR (SPI_STC_vect){
+  // turn on SPI in peripheral mode
+  SPCR0 = 0;
+  SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(0<<CPOL0)|(0<<CPHA0)|(0<<SPR01)|(1<<SPR00);
+  SPSR0 &= ~(0<<SPI2X0);
   if (digitalRead(SS_Pin) == LOW){
     // Check index
     if (posIndex >= 4){
@@ -92,6 +96,7 @@ ISR (SPI_STC_vect){
     else{
       //Read byte from SPI buffer
       posFromMega.posBytes[posIndex] = SPDR0;
+      
       // Write encoder value to buffer
       SPDR0 = posEncoder.posBytes[posIndex];
       posIndex++;
@@ -104,9 +109,9 @@ void loop(void)
 {
   //posEncoder.posFloat = stepper.encoder.getAngleMoved();
   //delay(50);
-  //if (digitalRead(SS_Pin) == HIGH){
+  //if (digitalRead(SS_Pin) == LOW){
   //  posEncoder.posFloat = stepper.encoder.getAngleMoved();
-  //   Serial.println(posEncoder.posFloat);
+  //   Serial.println("SS - not interrupt");
   //  delay(100);
   //}
   //Serial.println(posIndex);
@@ -114,16 +119,17 @@ void loop(void)
 
   if (fallingSS == 1){
     fallingSS = 0;
-    Serial.println("SS triggered");
+    posEncoder.posFloat = 111.11;
+//    Serial.println("SS triggered");
   }
   
   stepper.moveAngle(1);
   // If end byte was received, process data
   if (process_it){
-    Serial.print("From controller: ");
-    Serial.println(posFromMega.posFloat);
-    Serial.print("From encoder: ");
-    Serial.println(posEncoder.posFloat);
+//    Serial.print("From controller: ");
+//    Serial.println(posFromMega.posFloat);
+//    Serial.print("From encoder: ");
+//    Serial.println(posEncoder.posFloat);
     //posEncoder.posFloat = stepper.encoder.getAngleMoved();
     process_it = false;
   }

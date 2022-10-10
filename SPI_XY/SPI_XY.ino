@@ -12,6 +12,7 @@ SPISettings settings0(4000000, MSBFIRST, SPI_MODE0);  // At 16 = SPI Clock = 8MH
 const byte selectPinX = 10;
 const byte selectPinY = 9;
 const byte selectPinZ = 8;
+const byte resetPin = 4;
 
 
 ////////////////////////////////////////////////////////
@@ -57,9 +58,15 @@ void setup() {
   pinMode(selectPinX, OUTPUT);
   pinMode(selectPinY, OUTPUT);
   pinMode(selectPinZ, OUTPUT);
+  pinMode(resetPin, OUTPUT);
   digitalWrite(selectPinX, HIGH);
   digitalWrite(selectPinY, HIGH);
   digitalWrite(selectPinZ, HIGH);
+
+  digitalWrite(resetPin, HIGH);
+  digitalWrite(resetPin, LOW);
+  delay(100);
+  digitalWrite(resetPin, HIGH);
 
   pinMode(joyPinX, INPUT);
   pinMode(joyPinY, INPUT);
@@ -109,11 +116,12 @@ void stepperWrite(int pinSS, pos_data* outData, pos_data* inData){
   // take the select pin low to select the chip:
   digitalWrite(SS, LOW);
   digitalWrite(pinSS, LOW);
-  inData->posFloat = 0.0;
+//  inData->posFloat = 0.0;
   
   //Send first byte and discard last byte that was sent (lastByte)
   // transfer first sends data on MOSI, then waits and receives from MISO
   firstByte = SPI.transfer(outData->posBytes[0]);
+  delayMicroseconds(10);
   for (int i = 0; i < 4; i++){
     if (i < 3){
       // Send bytes 2 - 4 and receive bytes 1 -3
@@ -123,7 +131,7 @@ void stepperWrite(int pinSS, pos_data* outData, pos_data* inData){
       // Send placeholder last byte and receive byte 4
       inData->posBytes[i] = SPI.transfer(lastByte);
     }
-    delayMicroseconds(20); // delay between transmissions
+    delayMicroseconds(10); // delay between transmissions
   }
   // take the select pin high to de-select the chip:
   digitalWrite(pinSS, HIGH);
@@ -179,28 +187,44 @@ void loop() {
   stepperWrite(selectPinX, &posToX, &posEncX);
   Serial.print("X: ");
   Serial.println(posEncX.posFloat);
+
+  Serial.println(posEncX.posFloat);
+  Serial.print(posEncX.posBytes[0], DEC);
+  Serial.print('\t');
+  Serial.println(posEncX.posBytes[0], BIN);
+  Serial.print(posEncX.posBytes[1], DEC);
+  Serial.print('\t');
+  Serial.println(posEncX.posBytes[1], BIN);
+  Serial.print(posEncX.posBytes[2], DEC);
+  Serial.print('\t');
+  Serial.println(posEncX.posBytes[2], BIN);
+  Serial.print(posEncX.posBytes[3], DEC);
+  Serial.print('\t');
+  Serial.println(posEncX.posBytes[3], BIN);
+  
+  Serial.println();
  
   stepperWrite(selectPinY, &posToY, &posEncY);
   Serial.print("Y: ");   
   Serial.println(posEncY.posFloat);
 
-  stepperWrite(selectPinZ, &posToZ, &posEncZ);
-  Serial.print("Z: ");   
-  Serial.println(posEncZ.posFloat);
+//  stepperWrite(selectPinZ, &posToZ, &posEncZ);
+//  Serial.print("Z: ");   
+//  Serial.println(posEncZ.posFloat);
 
-  Serial.println(posEncZ.posFloat);
-  Serial.print(posEncZ.posBytes[0], DEC);
+  Serial.println(posEncY.posFloat);
+  Serial.print(posEncY.posBytes[0], DEC);
   Serial.print('\t');
-  Serial.println(posEncZ.posBytes[0], BIN);
-  Serial.print(posEncZ.posBytes[1], DEC);
+  Serial.println(posEncY.posBytes[0], BIN);
+  Serial.print(posEncY.posBytes[1], DEC);
   Serial.print('\t');
-  Serial.println(posEncZ.posBytes[1], BIN);
-  Serial.print(posEncZ.posBytes[2], DEC);
+  Serial.println(posEncY.posBytes[1], BIN);
+  Serial.print(posEncY.posBytes[2], DEC);
   Serial.print('\t');
-  Serial.println(posEncZ.posBytes[2], BIN);
-  Serial.print(posEncZ.posBytes[3], DEC);
+  Serial.println(posEncY.posBytes[2], BIN);
+  Serial.print(posEncY.posBytes[3], DEC);
   Serial.print('\t');
-  Serial.println(posEncZ.posBytes[3], BIN);
+  Serial.println(posEncY.posBytes[3], BIN);
   
   Serial.println();
   
