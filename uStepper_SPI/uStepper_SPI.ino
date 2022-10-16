@@ -5,23 +5,23 @@ uStepperS stepper;
 // include the SPI library:
 //#include <SPI.h>
 
-const byte SS_Pin = 3;
+const uint8_t SS_Pin = 3;
 
 union pos_data{
-  float posFloat;
-  uint8_t posBytes[4];
+  volatile float posFloat;
+  volatile uint8_t posBytes[4];
 };
 
 volatile pos_data posEncoder;
 volatile pos_data posFromMega;
 
 volatile int posIndex = 0;
-volatile byte lastByte = 0;
+volatile uint8_t lastByte = 0;
 
 volatile int prevSelectState = 1;
 volatile int fallingSS = 0;
 
-volatile boolean process_it = false;
+volatile bool process_it = false;
 
 
 void setup(void)
@@ -54,36 +54,32 @@ void setup(void)
   stepper.checkOrientation(5.0);      //Check orientation of motor connector with +/- 30 microsteps movement
   stepper.setControlThreshold(15);    //Adjust the control threshold - here set to 15 microsteps before making corrective action
 
-  stepper.moveSteps(51200);           //Turn shaft 51200 steps, counterClockWise (equal to one revolution with the TMC native 1/256 microstepping)
+  // stepper.moveSteps(51200);           //Turn shaft 51200 steps, counterClockWise (equal to one revolution with the TMC native 1/256 microstepping)
 
 
   ///////////////////////////////////////////
   // have to send on controller in, peripheral out
   pinMode(MISO0, OUTPUT);
   pinMode(SS0, INPUT);
-  pinMode(SCK0, INPUT);
+  // pinMode(SCK0, INPUT);
   pinMode(SS_Pin, INPUT);
   
-  // turn on SPI in peripheral mode
+  // turn on SPI in peripheral mode, but with no interrupt
   SPCR0 = 0;
   SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(0<<CPOL0)|(0<<CPHA0)|(0<<SPR01)|(1<<SPR00);
   SPSR0 &= ~(0<<SPI2X0);
   interrupts();
-  attachInterrupt(digitalPinToInterrupt(SS_Pin), ss_falling, FALLING);
+//  attachInterrupt(digitalPinToInterrupt(SS_Pin), ss_falling, FALLING);
 
 }
 
-void ss_falling(){
-  fallingSS = 1;
-}
+//void ss_falling(){
+//  fallingSS = 1;
+//}
 
 
 // SPI interrupt routine
 ISR (SPI_STC_vect){
-  // turn on SPI in peripheral mode
-  SPCR0 = 0;
-  SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(0<<CPOL0)|(0<<CPHA0)|(0<<SPR01)|(1<<SPR00);
-  SPSR0 &= ~(0<<SPI2X0);
   if (digitalRead(SS_Pin) == LOW){
     // Check index
     if (posIndex >= 4){
@@ -107,30 +103,16 @@ ISR (SPI_STC_vect){
 
 void loop(void)
 {
-  //posEncoder.posFloat = stepper.encoder.getAngleMoved();
-  //delay(50);
-  //if (digitalRead(SS_Pin) == LOW){
-  //  posEncoder.posFloat = stepper.encoder.getAngleMoved();
-  //   Serial.println("SS - not interrupt");
-  //  delay(100);
-  //}
-  //Serial.println(posIndex);
-  //delay(50);
-
-  if (fallingSS == 1){
-    fallingSS = 0;
-    posEncoder.posFloat = 111.11;
-//    Serial.println("SS triggered");
-  }
   
-  stepper.moveAngle(1);
+  // stepper.moveAngle(1);
+
   // If end byte was received, process data
   if (process_it){
-//    Serial.print("From controller: ");
-//    Serial.println(posFromMega.posFloat);
-//    Serial.print("From encoder: ");
-//    Serial.println(posEncoder.posFloat);
-    //posEncoder.posFloat = stepper.encoder.getAngleMoved();
+    Serial.print("From controller: ");
+    Serial.println(posFromMega.posFloat);
+    Serial.print("From encoder: ");
+    Serial.println(posEncoder.posFloat);
+    posEncoder.posFloat = posEncoder.posFloat + 1;
     process_it = false;
   }
 }
