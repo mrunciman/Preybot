@@ -61,7 +61,6 @@ void setup() {
   // set the peripheral select pins as output:
   pinMode(SS, OUTPUT);
   pinMode(MOSI, OUTPUT);
-//  pinMode(SCK, OUTPUT);
   pinMode(MISO, INPUT);
   pinMode(selectPinX, OUTPUT);
   pinMode(selectPinY, OUTPUT);
@@ -83,12 +82,7 @@ void setup() {
   
   // initialize SPI:
   SPI.begin();
-//   SPCR = 0; 
-//   SPCR |= (0<<SPIE)|(0<<SPE)|(0<<DORD)|(1<<MSTR)|(0<<CPOL)|(0<<CPHA)|(0<<SPR1)|(0<<SPR0);
-//   SPSR &= ~(0<<SPI2X0);
-//   while(!(SPSR & (1<<SPIF))){;}
-   
-
+ 
   posToX.fData = 50.0;
   posToY.fData = 51.0;
   posToZ.fData = 52.0;
@@ -101,6 +95,7 @@ void setup() {
 
 
 /////////////////////////////////////////////////////////
+
 
 void readJoystick(){
   joyValueX = analogRead(joyPinX);
@@ -150,49 +145,6 @@ void stepExchange(int pinSS, dataFloat* outData, dataFloat* inData){
 }
 
 
-void stepperTwoFloat(int pinSS, dataFloat* outData, dataFloat* inData, dataFloat* pressData){
-  SPI.beginTransaction(settings0);
-  // take the select pin low to select the chip:
-  // digitalWrite(SS, LOW);
-  digitalWrite(pinSS, LOW);
-//  inData->fData = 0.0;
-  
-  //Send first byte and discard last byte that was sent (lastByte)
-  // transfer first sends data on MOSI, then waits and receives from MISO
-  firstByte = SPI.transfer(outData->bData[0]);
-  delayMicroseconds(microDelay);
-  for (int i = 0; i < 8; i++){
-    if (i < 3){
-      // Send bytes 2 - 4 and receive bytes 1 -3
-      inData->bData[i] = SPI.transfer(outData->bData[i+1]);
-    }
-    else if (i == 3){
-      // Send placeholder last byte and receive byte 4
-      inData->bData[i] = SPI.transfer(outData->bData[0]);
-      delayMicroseconds(microDelay);
-    }
-    delayMicroseconds(microDelay); // delay between transmissions
-  }
-
-  for (int i = 0; i < 8; i++){
-    if (i < 3){
-      // Send bytes 2 - 4 and receive bytes 1 -3
-      pressData->bData[i] = SPI.transfer(outData->bData[i+1]);
-    }
-    else if (i == 3){
-      // Send placeholder last byte and receive byte 4
-      pressData->bData[i] = SPI.transfer(lastByte);
-      delayMicroseconds(microDelay);
-    }
-    delayMicroseconds(microDelay); // delay between transmissions
-  }
-
-  // take the select pin high to de-select the chip:
-  digitalWrite(pinSS, HIGH);
-  // digitalWrite(SS, HIGH);
-  SPI.endTransaction();
-}
-
 
 
 ///////////////////////////////////////////////////////////
@@ -201,65 +153,13 @@ void stepperTwoFloat(int pinSS, dataFloat* outData, dataFloat* inData, dataFloat
 void loop() {
 
   // Update joyValX and joyValY
-  // readJoystick();
+  readJoystick();
   // Map joystick to XY plane
-  // mapJoystick();
-//  Serial.println(digitalRead(joySwitch));
-//  Serial.println(posX);
-//  Serial.println(posY);
-//  Serial.println();
-  
-  // Send desired positions to steppers
-//  stepExchange(selectPinX, &posToX, &posEncX);
+  mapJoystick();
+
   stepExchange(selectPinX, &posToX, &posEncX);
-  posToX.fData += 1;
-  Serial.println(posToX.fData);
-
-  Serial.print("X: ");
-  Serial.println(posEncX.fData);
-
-  Serial.print(posEncX.bData[0], DEC);
-  Serial.print('\t');
-  Serial.println(posEncX.bData[0], BIN);
-  Serial.print(posEncX.bData[1], DEC);
-  Serial.print('\t');
-  Serial.println(posEncX.bData[1], BIN);
-  Serial.print(posEncX.bData[2], DEC);
-  Serial.print('\t');
-  Serial.println(posEncX.bData[2], BIN);
-  Serial.print(posEncX.bData[3], DEC);
-  Serial.print('\t');
-  Serial.println(posEncX.bData[3], BIN);
   
-  Serial.println();
-
   stepExchange(selectPinY, &posToY, &posEncY);
-//  stepExchange(selectPinY, &posToY, &posEncY);
-  Serial.println(posToY.fData);
-
-  Serial.print("Y: ");   
-  Serial.println(posEncY.fData);
-
-  Serial.println(posEncY.fData);
-  Serial.print(posEncY.bData[0], DEC);
-  Serial.print('\t');
-  Serial.println(posEncY.bData[0], BIN);
-  Serial.print(posEncY.bData[1], DEC);
-  Serial.print('\t');
-  Serial.println(posEncY.bData[1], BIN);
-  Serial.print(posEncY.bData[2], DEC);
-  Serial.print('\t');
-  Serial.println(posEncY.bData[2], BIN);
-  Serial.print(posEncY.bData[3], DEC);
-  Serial.print('\t');
-  Serial.println(posEncY.bData[3], BIN);
-  
-  Serial.println();
-
-  
-//  stepExchange(selectPinZ, &posToZ, &posEncZ);
-//  Serial.print("Z: ");   
-//  Serial.println(posEncZ.fData);
   
   delay(1000);
 
