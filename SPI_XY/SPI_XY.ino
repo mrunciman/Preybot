@@ -3,21 +3,32 @@
 
 */
 
-///////////////////////////////////////////////////////
-// include the SPI library:
+
 #include <SPI.h>
-SPISettings settings0(1000000, MSBFIRST, SPI_MODE0);
+#include "trackball.h"
+
+/////////////////////////////////////////////////////////
+// Trackball setup
+
+int SPI_Clock_tBall = 500000;
+trackball tBall(SPI_Clock_tBall);
+
+
+//////////////////////////////////////////////////////////
+// SPI setup for uStepperS peripherals
+int SPI_Clock_uStep = 1000000;
+SPISettings settings0(SPI_Clock_uStep, MSBFIRST, SPI_MODE0);
 
 // set pin 10 as the slave select for the X axis, 20 for Y axis
-const byte selectPinX = 9;
-const byte selectPinY = 10;
-const byte selectPinZ = 8;
-const byte resetPin = 4;
+const byte selectPinX = 8;
+const byte selectPinY = 9;
+const byte selectPinZ = 10;
+const byte resetPin = 11;
 int microDelay = 50;
 
 
 ////////////////////////////////////////////////////////
-// uStepper setup
+// uStepper data structures
 
 int posX = 0;
 int posY = 0;
@@ -57,6 +68,7 @@ int joyValueY = 0;
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("Start XY Stage");
   
   // set the peripheral select pins as output:
   pinMode(SS, OUTPUT);
@@ -79,10 +91,7 @@ void setup() {
   pinMode(joyPinY, INPUT);
   pinMode(joySwitch, INPUT_PULLUP);
 
-  
-  // initialize SPI:
-  SPI.begin();
- 
+
   posToX.fData = 50.0;
   posToY.fData = 51.0;
   posToZ.fData = 52.0;
@@ -90,12 +99,28 @@ void setup() {
   posEncY.fData = 0.0;
   posEncZ.fData = 0.0;
 
-  Serial.println("Start XY Stage");
+  
+  // initialize SPI:
+  SPI.begin();
+ 
+  // // Initialise trackball
+  // if(tBall.mousecam_init(PIN_MOUSECAM_RESET_1, PIN_MOUSECAM_CS_1)==-1)
+  // {
+  //   Serial.println("Mouse cam_1 failed to init");
+  //   while(1);
+  // }  
+  // if(tBall.mousecam_init(PIN_MOUSECAM_RESET_2, PIN_MOUSECAM_CS_2)==-1)
+  // {
+  //   Serial.println("Mouse cam_2 failed to init");
+  //   while(1);
+  // }
+
+
 }
 
 
 /////////////////////////////////////////////////////////
-
+// Functions
 
 void readJoystick(){
   joyValueX = analogRead(joyPinX);
@@ -117,10 +142,8 @@ void mapJoystick(){
 
 void stepExchange(int pinSS, dataFloat* outData, dataFloat* inData){
   SPI.beginTransaction(settings0);
-  // take the select pin low to select the chip:
-  // digitalWrite(SS, LOW);
+  // take the select pin low to activate buffer
   digitalWrite(pinSS, LOW);
-//  inData->fData = 0.0;
   
   //Send first byte and discard last byte that was sent (lastByte)
   // transfer first sends data on MOSI, then waits and receives from MISO
@@ -140,11 +163,17 @@ void stepExchange(int pinSS, dataFloat* outData, dataFloat* inData){
   }
   // take the select pin high to de-select the chip:
   digitalWrite(pinSS, HIGH);
-  // digitalWrite(SS, HIGH);
   SPI.endTransaction();
 }
 
 
+void updateTrackball(){
+  tBall.mousecam_read_motion(&tBall.md_1, PIN_MOUSECAM_CS_1);
+  tBall.mousecam_read_motion(&tBall.md_2, PIN_MOUSECAM_CS_2);  
+  tBall.xTranslation();
+  tBall.yTranslation();
+  tBall.yawAngle();
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -157,9 +186,23 @@ void loop() {
   // Map joystick to XY plane
   mapJoystick();
 
+  // Get values from trackball
+  // updateTrackball();
+  // Serial.print(tBall.x_mm);     Serial.print("\t");
+  // Serial.print(tBall.y_mm);     Serial.print("\t");
+  // Serial.println(tBall.yaw_deg);
+
+  // Send desired positions to respective stepper motors
+  posToX.fData = posToX.fData + 1;
+  posToY.fData = posToY.fData + 1;
+  posToZ.fData = posToZ.fData + 1;
   stepExchange(selectPinX, &posToX, &posEncX);
-  
   stepExchange(selectPinY, &posToY, &posEncY);
+  stepExchange(selectPinZ, &posToZ, &posEncZ);
+  Serial.println(posEncX.fData);
+  Serial.println(posEncY.fData);
+  Serial.println(posEncZ.fData);
+  Serial.println();
   
   delay(1000);
 

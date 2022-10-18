@@ -2,9 +2,6 @@
 #include <uStepperS.h>
 uStepperS stepper;
 
-// include the SPI library:
-//#include <SPI.h>
-
 const uint8_t SS_Pin = 3;
 
 union pos_data{
@@ -104,15 +101,14 @@ ISR (SPI_STC_vect){
 void loop(void)
 {
   
-  // stepper.moveAngle(1);
-
   // If end byte was received, process data
   if (process_it){
     Serial.print("From controller: ");
     Serial.println(posFromMega.posFloat);
     Serial.print("From encoder: ");
     Serial.println(posEncoder.posFloat);
-    posEncoder.posFloat = posEncoder.posFloat + 1;
+    posEncoder.posFloat = stepper.encoder.getAngleMoved();
+    stepper.moveToAngle(posFromMega.posFloat);
     process_it = false;
   }
 }
