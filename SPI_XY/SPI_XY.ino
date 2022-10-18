@@ -103,17 +103,17 @@ void setup() {
   // initialize SPI:
   SPI.begin();
  
-  // // Initialise trackball
-  // if(tBall.mousecam_init(PIN_MOUSECAM_RESET_1, PIN_MOUSECAM_CS_1)==-1)
-  // {
-  //   Serial.println("Mouse cam_1 failed to init");
-  //   while(1);
-  // }  
-  // if(tBall.mousecam_init(PIN_MOUSECAM_RESET_2, PIN_MOUSECAM_CS_2)==-1)
-  // {
-  //   Serial.println("Mouse cam_2 failed to init");
-  //   while(1);
-  // }
+  // Initialise trackball
+  if(tBall.mousecam_init(PIN_MOUSECAM_RESET_1, PIN_MOUSECAM_CS_1)==-1)
+  {
+    Serial.println("Mouse cam_1 failed to init");
+    while(1);
+  }  
+  if(tBall.mousecam_init(PIN_MOUSECAM_RESET_2, PIN_MOUSECAM_CS_2)==-1)
+  {
+    Serial.println("Mouse cam_2 failed to init");
+    while(1);
+  }
 
 
 }
@@ -187,10 +187,10 @@ void loop() {
   mapJoystick();
 
   // Get values from trackball
-  // updateTrackball();
-  // Serial.print(tBall.x_mm);     Serial.print("\t");
-  // Serial.print(tBall.y_mm);     Serial.print("\t");
-  // Serial.println(tBall.yaw_deg);
+  updateTrackball();
+  Serial.print(tBall.x_mm);     Serial.print("\t");
+  Serial.print(tBall.y_mm);     Serial.print("\t");
+  Serial.println(tBall.yaw_deg);
 
   // Send desired positions to respective stepper motors
   posToX.fData = posToX.fData + 1;

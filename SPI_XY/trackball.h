@@ -6,9 +6,10 @@
 
 
 class trackball{
-  // #define PIN_MISO      12
-  // #define PIN_MOSI      11
-  // #define PIN_SCK       13
+  // SPI pins on the MEGA
+  // #define PIN_MISO      50
+  // #define PIN_MOSI      51
+  // #define PIN_SCK       52
 
   #define PIN_MOUSECAM_RESET_1     3
   #define PIN_MOUSECAM_CS_1        2
