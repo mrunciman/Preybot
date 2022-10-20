@@ -4,13 +4,15 @@ uStepperS stepper;
 
 const uint8_t SS_Pin = 3;
 
-union pos_data{
-  volatile float posFloat;
-  volatile uint8_t posBytes[4];
+union dataFloat{
+  float fData;
+  uint8_t bData[4];
 };
 
-volatile pos_data posEncoder;
-volatile pos_data posFromMega;
+float desiredAngle = 0.0;
+
+volatile dataFloat posEncoder;
+volatile dataFloat posFromMega;
 
 volatile int posIndex = 0;
 volatile uint8_t lastByte = 0;
@@ -20,6 +22,9 @@ volatile int fallingSS = 0;
 
 volatile bool process_it = false;
 
+volatile bool startMessage = false; 
+volatile bool endMessage = false; 
+
 
 void setup(void)
 {
@@ -27,21 +32,10 @@ void setup(void)
   Serial.begin(115200);
   stepper.setup(CLOSEDLOOP,200);     //Initiate the stepper object to use closed loop control with 200 steps per revolution motor - i.e. 1.8 deg stepper 
   // Initialise data structures
-  posEncoder.posFloat = 3.14;// stepper.encoder.getAngleMoved();
-  Serial.println(posEncoder.posFloat);
-  Serial.print(posEncoder.posBytes[0], DEC);
-  Serial.print('\t');
-  Serial.println(posEncoder.posBytes[0], BIN);
-  Serial.print(posEncoder.posBytes[1], DEC);
-  Serial.print('\t');
-  Serial.println(posEncoder.posBytes[1], BIN);
-  Serial.print(posEncoder.posBytes[2], DEC);
-  Serial.print('\t');
-  Serial.println(posEncoder.posBytes[2], BIN);
-  Serial.print(posEncoder.posBytes[3], DEC);
-  Serial.print('\t');
-  Serial.println(posEncoder.posBytes[3], BIN);
-  posFromMega.posFloat = 0.0;
+  posEncoder.fData = 3.14;// stepper.encoder.getAngleMoved();
+  posFromMega.fData = 0.0;
+  Serial.println(posEncoder.fData);
+
 
   
   // For the closed loop position control the acceleration and velocity parameters define the response of the control:
@@ -63,7 +57,7 @@ void setup(void)
   
   // turn on SPI in peripheral mode, but with no interrupt
   SPCR0 = 0;
-  SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(0<<CPOL0)|(0<<CPHA0)|(0<<SPR01)|(1<<SPR00);
+  SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(1<<CPOL0)|(1<<CPHA0)|(0<<SPR01)|(1<<SPR00);
   SPSR0 &= ~(0<<SPI2X0);
   interrupts();
 //  attachInterrupt(digitalPinToInterrupt(SS_Pin), ss_falling, FALLING);
@@ -75,6 +69,7 @@ void setup(void)
 //}
 
 
+/*
 // SPI interrupt routine
 ISR (SPI_STC_vect){
   if (digitalRead(SS_Pin) == LOW){
@@ -88,11 +83,45 @@ ISR (SPI_STC_vect){
     }
     else{
       //Read byte from SPI buffer
-      posFromMega.posBytes[posIndex] = SPDR0;
+      posFromMega.bData[posIndex] = SPDR0;
       
       // Write encoder value to buffer
-      SPDR0 = posEncoder.posBytes[posIndex];
+      SPDR0 = posEncoder.bData[posIndex];
       posIndex++;
+    }
+  }
+}// end of SPI interrupt routine
+*/
+
+// SPI interrupt routine
+ISR (SPI_STC_vect){
+  if (digitalRead(SS_Pin) == LOW){
+    if (startMessage == false){
+      char c = SPDR0;
+      if (c == '<'){
+        startMessage = true;
+      }
+    }
+    else{
+      // Check index
+      if (posIndex >= 4){
+        lastByte = SPDR0;
+        if (lastByte == '>'){
+          endMessage = true;
+        }
+        SPDR0 = 0;
+        posIndex = 0;
+        process_it = true;
+        // prevSelectState = 1;
+      }
+      else{
+        //Read byte from SPI buffer
+        posFromMega.bData[posIndex] = SPDR0;
+        
+        // Write encoder value to buffer
+        SPDR0 = posEncoder.bData[posIndex];
+        posIndex++;
+      }
     }
   }
 }// end of SPI interrupt routine
@@ -100,15 +129,35 @@ ISR (SPI_STC_vect){
 
 void loop(void)
 {
+
+  if (digitalRead(SS_Pin)==HIGH){
+    startMessage = false;
+    endMessage = false;
+    posIndex = 0;
+  }
   
   // If end byte was received, process data
   if (process_it){
     Serial.print("From controller: ");
-    Serial.println(posFromMega.posFloat);
+    Serial.println(posFromMega.fData);
+    Serial.print("Desired angle: ");  
+    Serial.println(desiredAngle);
     Serial.print("From encoder: ");
-    Serial.println(posEncoder.posFloat);
-    posEncoder.posFloat = stepper.encoder.getAngleMoved();
-    stepper.moveToAngle(posFromMega.posFloat);
+    Serial.println(posEncoder.fData);
+    Serial.println();
+
+    posEncoder.fData = stepper.encoder.getAngleMoved();
+
+    // If both start and end messages received correctly,
+    // move to position received from controller
+    if (startMessage && endMessage){
+      desiredAngle = posFromMega.fData;
+      stepper.moveToAngle(desiredAngle);
+      // Clear message flags so that any one message
+      // will only move the motor once.
+      startMessage = false;
+      endMessage = false;
+    }
     process_it = false;
   }
 }

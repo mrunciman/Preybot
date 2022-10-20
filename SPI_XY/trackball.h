@@ -54,9 +54,12 @@ class trackball{
   #define ADNS3080_PRODUCT_ID_VAL                   0x17
  
   public:
-    trackball(int SPI_Clock);
+    trackball();
 
-    SPISettings settings_tBall;  
+    const int SPI_Clock = 500000;
+     SPISettings settings_tBall;
+
+    // SPISettings settings_tBall(SPI_Clock, MSBFIRST, SPI_MODE3);  
 
     struct MD{
       byte motion;
@@ -88,9 +91,9 @@ class trackball{
     struct MD md_1;
     struct MD md_2;
 
-    float x_mm = 0;
-    float y_mm = 0;
-    float yaw_deg = 0;
+    float x_mm;
+    float y_mm;
+    float yaw_deg;
 
   private:
     float _BALL_DIAMETER = 50; // mm

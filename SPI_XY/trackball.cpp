@@ -1,12 +1,15 @@
 #include <SPI.h>
 #include "trackball.h"
 
+
 ///////////////////////////////////////////////////////////////
 // Class definition
-trackball::trackball(int SPI_Clock):
+trackball::trackball():
   settings_tBall(SPI_Clock, MSBFIRST, SPI_MODE3)
 {
-  ;
+  x_mm = 0.0;
+  y_mm = 0.0;
+  yaw_deg =0.0;
 }
 
 //////////////////////////////////////////////////////////////
@@ -32,6 +35,7 @@ int trackball::mousecam_init(int resetPin, int pinSS)
   mousecam_reset(resetPin); //PIN_MOUSECAM_RESET_1 PIN_MOUSECAM_RESET_2
   
   int pid = mousecam_read_reg(ADNS3080_PRODUCT_ID, pinSS);
+  Serial.println(pid);
   if(pid != ADNS3080_PRODUCT_ID_VAL)
     return -1;
 
@@ -54,6 +58,8 @@ void trackball::mousecam_write_reg(int reg, int val, int pinSS)
 
 int trackball::mousecam_read_reg(int reg, int pinSS)
 {
+  Serial.print("Register: ");
+  Serial.println(reg);
   SPI.beginTransaction(settings_tBall);
   digitalWrite(pinSS, LOW);
   SPI.transfer(reg);
