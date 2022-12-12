@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////
 // Class definition
 trackball::trackball():
-  settings_tBall(SPI_Clock, MSBFIRST, SPI_MODE3)
+  settings_tBall(500000, MSBFIRST, SPI_MODE3)
 {
   x_mm = 0.0;
   y_mm = 0.0;

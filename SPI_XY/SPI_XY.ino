@@ -10,20 +10,20 @@
 /////////////////////////////////////////////////////////
 // Trackball setup
 
-int SPI_Clock_tBall = 500000;
+// int SPI_Clock_tBall = 500000;
 trackball tBall;
 
 
 //////////////////////////////////////////////////////////
 // SPI setup for uStepperS peripherals
 int SPI_Clock_uStep = 1000000;
-SPISettings settings0(SPI_Clock_uStep, MSBFIRST, SPI_MODE0);
+SPISettings settings0(1000000, MSBFIRST, SPI_MODE3); // Using the hardcoded value made it work
 
 // set pin 10 as the slave select for the X axis, 20 for Y axis
-const byte selectPinX = 8;
-const byte selectPinY = 9;
-const byte selectPinZ = 10;
-const byte resetPin = 11;
+const byte selectPinX = 10;
+const byte selectPinY = 11;
+const byte selectPinZ = 12;
+const byte resetPin = 8;
 int microDelay = 50;
 
 

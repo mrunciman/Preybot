@@ -56,7 +56,7 @@ class trackball{
   public:
     trackball();
 
-    const int SPI_Clock = 500000;
+    // const int SPI_Clock = 500000;
      SPISettings settings_tBall;
 
     // SPISettings settings_tBall(SPI_Clock, MSBFIRST, SPI_MODE3);  

@@ -4,6 +4,8 @@ uStepperS stepper;
 
 const uint8_t SS_Pin = 3;
 
+// char data[20];
+
 union dataFloat{
   float fData;
   uint8_t bData[4];
@@ -17,13 +19,12 @@ volatile dataFloat posFromMega;
 volatile int posIndex = 0;
 volatile uint8_t lastByte = 0;
 
-volatile int prevSelectState = 1;
-volatile int fallingSS = 0;
-
 volatile bool process_it = false;
 
 volatile bool startMessage = false; 
 volatile bool endMessage = false; 
+
+volatile int prevSelectState = 1;
 
 
 void setup(void)
@@ -34,7 +35,7 @@ void setup(void)
   // Initialise data structures
   posEncoder.fData = 3.14;// stepper.encoder.getAngleMoved();
   posFromMega.fData = 0.0;
-  Serial.println(posEncoder.fData);
+  // Serial.println("Start");
 
 
   
@@ -57,7 +58,7 @@ void setup(void)
   
   // turn on SPI in peripheral mode, but with no interrupt
   SPCR0 = 0;
-  SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(1<<CPOL0)|(1<<CPHA0)|(0<<SPR01)|(1<<SPR00);
+  SPCR0 |= (1<<SPIE0)|(1<<SPE0)|(0<<DORD0)|(0<<MSTR0)|(1<<CPOL0)|(1<<CPHA0)|(0<<SPR01)|(1<<SPR00); // SPI_MODE 3
   SPSR0 &= ~(0<<SPI2X0);
   interrupts();
 //  attachInterrupt(digitalPinToInterrupt(SS_Pin), ss_falling, FALLING);
@@ -101,8 +102,9 @@ ISR (SPI_STC_vect){
       if (c == '<'){
         startMessage = true;
       }
+      SPDR0 = 0;
     }
-    else{
+    else{ // Have received start byte, so store received data
       // Check index
       if (posIndex >= 4){
         lastByte = SPDR0;
@@ -114,13 +116,19 @@ ISR (SPI_STC_vect){
         process_it = true;
         // prevSelectState = 1;
       }
-      else{
+      else if(endMessage == false){ 
+        // Prevent extra bytes being appended if Controller sends
+        // too many.
         //Read byte from SPI buffer
         posFromMega.bData[posIndex] = SPDR0;
         
         // Write encoder value to buffer
         SPDR0 = posEncoder.bData[posIndex];
         posIndex++;
+      }
+      else{
+        lastByte = SPDR0;
+        SPDR0 = 0;
       }
     }
   }
@@ -131,11 +139,12 @@ void loop(void)
 {
 
   if (digitalRead(SS_Pin)==HIGH){
+    prevSelectState = 0;
     startMessage = false;
     endMessage = false;
     posIndex = 0;
   }
-  
+ 
   // If end byte was received, process data
   if (process_it){
     Serial.print("From controller: ");
@@ -147,6 +156,7 @@ void loop(void)
     Serial.println();
 
     posEncoder.fData = stepper.encoder.getAngleMoved();
+    // Serial.println(posEncoder.bData[2], DEC);
 
     // If both start and end messages received correctly,
     // move to position received from controller

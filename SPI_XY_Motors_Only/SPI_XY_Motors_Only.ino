@@ -1,12 +1,14 @@
 ///////////////////////////////////////////////////////
 // include the SPI library:
 #include <SPI.h>
-SPISettings settings0(500000, MSBFIRST, SPI_MODE3);  // At 16 = SPI Clock = 8MHz.
+SPISettings settings0(1000000, MSBFIRST, SPI_MODE3);  // At 16 = SPI Clock = 8MHz.
 
 // set pin 10 as the slave select for the X axis, 20 for Y axis
 const byte selectPinX = 9;
-const byte selectPinY = 8;
-// const byte selectPinZ = 10;
+const byte selectPinY = 10;
+// const byte selectPinZ = 11;
+// const byte selectPinP = 12;
+const byte resetPin = 8;
 
 
 ////////////////////////////////////////////////////////
@@ -24,15 +26,15 @@ union dataFloat{
 
 dataFloat posEncX;
 dataFloat posEncY;
-// dataFloat posEncZ;
+dataFloat posEncZ;
 
 dataFloat posToX;
 dataFloat posToY;
-// dataFloat posToZ;
+dataFloat posToZ;
 
 dataFloat pressX;
 dataFloat pressY;
-// dataFloat pressZ;
+dataFloat pressZ;
 
 byte firstByte = 0;
 byte lastByte = 255;
@@ -60,13 +62,22 @@ void setup() {
   pinMode(SS, OUTPUT);
   pinMode(MOSI, OUTPUT);
   pinMode(SCK, OUTPUT);
-  pinMode(MISO, INPUT);
+  pinMode(MISO, INPUT_PULLUP);
   pinMode(selectPinX, OUTPUT);
   pinMode(selectPinY, OUTPUT);
   // pinMode(selectPinZ, OUTPUT);
+  // pinMode(selectPinP, OUTPUT);
   digitalWrite(selectPinX, HIGH);
   digitalWrite(selectPinY, HIGH);
   // digitalWrite(selectPinZ, HIGH);
+  // digitalWrite(selectPinP, HIGH);
+
+  pinMode(resetPin, OUTPUT);
+  digitalWrite(resetPin, LOW);
+  delay(10);
+  digitalWrite(resetPin, HIGH);
+  delay(10);
+
 
   pinMode(joyPinX, INPUT);
   pinMode(joyPinY, INPUT);
@@ -78,10 +89,10 @@ void setup() {
    
   posToX.fData = 50.0;
   posToY.fData = 51.0;
-  // posToZ.fData = 52.0;
+  posToZ.fData = 52.0;
   posEncX.fData = 0.0;
   posEncY.fData = 0.0;
-  // posEncZ.fData = 0.0;
+  posEncZ.fData = 0.0;
 
   Serial.println("Start XY Stage");
 }
@@ -194,8 +205,11 @@ void loop() {
   Serial.print("Measured angle Y: ");   
   Serial.println(posEncY.fData);
 
-  // stepExchange(selectPinZ, &posToZ, &posEncZ);
-  // Serial.print("Z: ");   
+  // posToZ.fData = posToZ.fData + 0.5;
+  // Serial.print("Desired Z position: ");
+  // Serial.println(posToZ.fData);
+  // stepExchange2(selectPinZ, &posToZ, &posEncZ);
+  // Serial.print("Measured angle Z: ");   
   // Serial.println(posEncZ.fData);
 
  
