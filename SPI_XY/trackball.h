@@ -96,6 +96,8 @@ class trackball{
     float x_mm;
     float y_mm;
     float yaw_deg;
+    float t_dx;
+    float t_dy;
 
   private:
     float _BALL_DIAMETER = 50; // mm

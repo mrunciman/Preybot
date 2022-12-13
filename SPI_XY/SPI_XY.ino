@@ -1,5 +1,10 @@
 /*
 
+Turn on
+Reset motors
+Initialise trackball
+Home XY stage and wait
+Respond to trackball and joystick
 
 */
 
@@ -14,6 +19,7 @@
 // instantiate trackball object "tBall"
 trackball tBall;
 
+
 //////////////////////////////////////////////////////////
 // Setup pins for uStepperS peripherals
 const byte selectPinX = 9;
@@ -27,12 +33,10 @@ float PULLEY_RAD = 6.0; // mm
 
 float posX = 0.0;
 float posY = 0.0;
-int floatLen = 9;
-int floatPrec = 2;
+int FLOAT_LEN = 9;
+int FLOAT_PREC = 2;
 char posXStr[10];
 char posYStr[10]; 
-float dAngle1 = 0.0;
-float dAngle2 = 0.0;
 
 bool stageHomed = false;
 
@@ -41,6 +45,7 @@ unsigned long timeNow;
 unsigned long timeLastExecution;
 unsigned long LOOP_FREQ = 1;
 unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
+
 
 ////////////////////////////////////////////////////////
 // uStepper data structures
@@ -65,7 +70,6 @@ float deltaJoyX = 0.0;
 float deltaJoyY = 0.0;
 
 
-
 ////////////////////////////////////////////////////////
 // Messages
 char data[54]; // Char array to write stepNo, pressure and time into
@@ -75,6 +79,7 @@ unsigned long writeTime;
 
 ////////////////////////////////////////////////////////
 // Setup
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Start XY Stage");
@@ -149,8 +154,24 @@ void readTrackball(){
 }
 
 
+void transformtBall(){
+  tBall.t_dx = tBall.x_mm;
+  tBall.t_dy = tBall.y_mm;
+}
+
 
 // uSteppers / XY Stage //
+
+void intialPosition(){
+  // Read encoder value from each motor. 
+  for(auto &item : axisList){
+    // For each motor, SPI transfer desired and true andgular positions
+    item.sendRecvFloat(item.selectPin, &item.dataOut, &item.dataIn);
+    item.initEncoder = item.dataIn.fData;
+  }
+}
+
+
 bool homeXYStage(){
   bool xHomed = false;
   bool yHomed = false;
@@ -202,6 +223,8 @@ bool homeY(){
 void calcAngles(float dx, float dy){
   float delta1;
   float delta2;
+  float dAngle1;
+  float dAngle2;
 
   delta1 = dx + dy;
   delta2 = dx - dy;
@@ -215,6 +238,23 @@ void calcAngles(float dx, float dy){
 }
 
 
+// Calculate XY position of stage from motor angles
+void calcPosition(float angle1, float angle2){
+  posX = (angle1 - axisList[0].homeOffset)*PULLEY_RAD;  
+  posY = (angle2 - axisList[1].homeOffset)*PULLEY_RAD;
+}
+
+
+void setPosition(float desX, float desY){
+  float dx;
+  float dy;
+  // Find differences
+  dx = desX - posX;
+  dy = desY - posY;
+  //Calculate and set change in angles
+  calcAngles(dx, dy);
+}
+
 
 // Move each motor individually
 void moveMotors(){
@@ -226,30 +266,13 @@ void moveMotors(){
 }
 
 
-// Calculate XY position of stage from motor angles
-void calcPosition(float angle1, float angle2){
-  posX = (angle1 - axisList[0].homeOffset)*PULLEY_RAD;  
-  posY = (angle2 - axisList[1].homeOffset)*PULLEY_RAD;
-}
-
-
-void intialPosition(){
-  // Read encoder value from each motor. 
-  for(auto &item : axisList){
-    // For each motor, SPI transfer desired and true andgular positions
-    item.sendRecvFloat(item.selectPin, &item.dataOut, &item.dataIn);
-    item.initEncoder = item.dataIn.fData;
-  }
-}
-
-
 // Send values to serial
 void writeSerial(){
   // Write angle data to control computer.
   writeTime = millis();
   // Save float values in char arrays as Arduino can't send them as is
-  dtostrf(posX, floatLen, floatPrec, posXStr);
-  dtostrf(posY, floatLen, floatPrec, posYStr);
+  dtostrf(posX, FLOAT_LEN, FLOAT_PREC, posXStr);
+  dtostrf(posY, FLOAT_LEN, FLOAT_PREC, posYStr);
   data[0] ='\0';
   // Send 4 encoder values, three pressure values, time and end byte
   sprintf(data, "%s,%s,%lu,%c\n", posXStr, posYStr, writeTime, endByte);
@@ -258,15 +281,7 @@ void writeSerial(){
 
 
 
-// int setState(LinAxis& axisObject){
-//   if (axisObject.calibrated == false){
-//     axisObject.motorState = CALIBRATING;
-//   }
-//   else if (axisObject.calibrated){//some other condition
-//     axisObject.motorState = ACTIVE;
-//   }
-//   return axisObject.motorState;
-// }
+
 
 
 
@@ -278,6 +293,7 @@ void writeSerial(){
 
 void loop() {
 
+  // Check if sampling period has been 
   timeNow = micros();
   timeSinceExec = timeNow - timeLastExecution;
   if (timeSinceExec >= LOOP_PERIOD_MICRO){
@@ -294,31 +310,16 @@ void loop() {
     // Serial.print(tBall.x_mm); Serial.print("\t"); Serial.print(tBall.y_mm); Serial.print("\t"); Serial.println(tBall.yaw_deg);
 
     // Calc then send desired positions to respective stepper motors
-    calcAngles(tBall.x_mm, tBall.y_mm);
+    calcAngles(tBall.t_dx, tBall.t_dy);
     moveMotors();
     calcPosition(axisList[0].dataIn.fData, axisList[1].dataIn.fData);
 
     // Send out over serial
     writeSerial();
     
-
   }
 }
 
 
 
-// Turn on, home, and wait
-// Respond to trackball and joystick
-
-
-// Home stage
-// In loop:
-// Read trackball
-// Calculate change in position (transform trackball to change in mm)
-// Move XY stage / Send values 
-
-
-// Functions
-// Set sampling interval
-// 
 
