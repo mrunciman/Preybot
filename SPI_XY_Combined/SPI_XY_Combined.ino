@@ -13,9 +13,9 @@
 // char data[20];
 
 // these pins may be different on different boards
-#define PIN_MISO      50
-#define PIN_MOSI      51
-#define PIN_SCK       52
+// #define PIN_MISO      50
+// #define PIN_MOSI      51
+// #define PIN_SCK       52
 
 #define PIN_MOUSECAM_RESET_1     3
 #define PIN_MOUSECAM_CS_1        11

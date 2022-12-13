@@ -12,9 +12,9 @@ class trackball{
   // #define PIN_SCK       52
 
   #define PIN_MOUSECAM_RESET_1     3
-  #define PIN_MOUSECAM_CS_1        2
+  #define PIN_MOUSECAM_CS_1        11
   #define PIN_MOUSECAM_RESET_2     5
-  #define PIN_MOUSECAM_CS_2        4
+  #define PIN_MOUSECAM_CS_2        12
 
   #define ADNS3080_PIXELS_X       30
   #define ADNS3080_PIXELS_Y       30

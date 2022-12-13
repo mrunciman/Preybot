@@ -4,8 +4,7 @@
 
 ///////////////////////////////////////////////////////////////
 // Class definition
-trackball::trackball():
-  settings_tBall(500000, MSBFIRST, SPI_MODE3)
+trackball::trackball()//   : settings_tBall(500000, MSBFIRST, SPI_MODE3)
 {
   x_mm = 0.0;
   y_mm = 0.0;
@@ -35,6 +34,7 @@ int trackball::mousecam_init(int resetPin, int pinSS)
   mousecam_reset(resetPin); //PIN_MOUSECAM_RESET_1 PIN_MOUSECAM_RESET_2
   
   int pid = mousecam_read_reg(ADNS3080_PRODUCT_ID, pinSS);
+  Serial.print(" ID: ");
   Serial.println(pid);
   if(pid != ADNS3080_PRODUCT_ID_VAL)
     return -1;
@@ -47,33 +47,33 @@ int trackball::mousecam_init(int resetPin, int pinSS)
 
 void trackball::mousecam_write_reg(int reg, int val, int pinSS)
 {
-  SPI.beginTransaction(settings_tBall);
+  // SPI.beginTransaction(settings_tBall);
   digitalWrite(pinSS, LOW);
   SPI.transfer(reg | 0x80);
   SPI.transfer(val);
   digitalWrite(pinSS, HIGH);
   delayMicroseconds(50);
-  SPI.endTransaction();
+  // SPI.endTransaction();
 }
 
 int trackball::mousecam_read_reg(int reg, int pinSS)
 {
-  Serial.print("Register: ");
-  Serial.println(reg);
-  SPI.beginTransaction(settings_tBall);
+  // Serial.print("Register: ");
+  // Serial.println(reg);
+  // SPI.beginTransaction(settings_tBall);
   digitalWrite(pinSS, LOW);
   SPI.transfer(reg);
   delayMicroseconds(75);
   int ret = SPI.transfer(0xff);
   digitalWrite(pinSS, HIGH); 
   delayMicroseconds(1);
-  SPI.endTransaction();
+  // SPI.endTransaction();
   return ret;
 }
 
 void trackball::mousecam_read_motion(struct MD *p, int pinSS)
 {
-  SPI.beginTransaction(settings_tBall);
+  // SPI.beginTransaction(settings_tBall);
   digitalWrite(pinSS, LOW);
   SPI.transfer(ADNS3080_MOTION_BURST);
   delayMicroseconds(75);
@@ -86,7 +86,7 @@ void trackball::mousecam_read_motion(struct MD *p, int pinSS)
   p->max_pix =  SPI.transfer(0xff);
   digitalWrite(pinSS,HIGH);
   delayMicroseconds(5);
-  SPI.endTransaction();
+  // SPI.endTransaction();
 }
 
 
