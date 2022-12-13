@@ -1,52 +1,16 @@
 #include "syringePump.h"
 
 
-LinAxis::LinAxis(uint8_t CS_Pin)//:  settingsSPI(1000000, MSBFIRST, SPI_MODE0)
+LinAxis::LinAxis(uint8_t CS_Pin, uint8_t LM_Pin)//:  settingsSPI(1000000, MSBFIRST, SPI_MODE0)
 {
     selectPin = CS_Pin;
     pinMode(selectPin, OUTPUT);
     digitalWrite(selectPin, HIGH);
+    limitPin = LM_Pin;
+    pinMode(selectPin, INPUT_PULLUP);
     dataIn.fData = 0.0;
     dataOut.fData = 0.0;
-    // pressurePin = pressPin;
-    // pinMode(pressPin, INPUT);
 }
-
-
-
-// float SyringePump::readPressure()
-// {
-//   vRead = analogRead(pressurePin);
-//   vOut = vRead * ADC_V;
-//   pressureRead = PSI_TO_KPA*(vOut - 0.1*vSupply)*(pMax - pMin)/(0.8*vSupply) - 0*pressureBaseline;
-//   // Serial.println("Pump");
-//   return pressureRead;
-// }
-
-
-
-// float SyringePump::filterPressure(float pressIn)
-// {
-//   float filtered = pressIn;
-//   // First take out any big jumps in position
-//   if (abs(pressurePrev - filtered) > 250){
-//     filtered = pressurePrev;
-//   }
-
-//   // Then stay between max and min
-//   if (filtered < PRESS_MIN)  {
-//     filtered = pressurePrev;
-//   }
-//   else if (filtered > PRESS_MAX){
-//     filtered = PRESS_MAX;
-//   }
-  
-//   // Update previous value
-//   pressurePrev = filtered;
-
-//   // Output 
-//   return filtered;
-// }
 
 
 

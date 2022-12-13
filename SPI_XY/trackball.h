@@ -81,6 +81,8 @@ class trackball{
     
     void mousecam_read_motion(struct MD *p, int pinSS);
 
+    bool init();
+
     float xTranslation();
 
     float yTranslation();

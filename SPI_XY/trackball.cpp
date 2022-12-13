@@ -71,6 +71,34 @@ int trackball::mousecam_read_reg(int reg, int pinSS)
   return ret;
 }
 
+
+bool trackball::init(){
+  Serial.println("Initialise cameras...");
+  Serial.print("Camera_1 ");
+  if(mousecam_init(PIN_MOUSECAM_RESET_1, PIN_MOUSECAM_CS_1)==-1)
+  {
+    Serial.println("Mouse cam_1 failed to init");
+    while(mousecam_init(PIN_MOUSECAM_RESET_1, PIN_MOUSECAM_CS_1)==-1){
+      Serial.print("Camera_1");
+      delay(500);
+    }
+  }  
+  Serial.print("Camera_2 ");
+  if(mousecam_init(PIN_MOUSECAM_RESET_2, PIN_MOUSECAM_CS_2)==-1)
+  {
+    Serial.println("Mouse cam_2 failed to init");
+    while(mousecam_init(PIN_MOUSECAM_RESET_2, PIN_MOUSECAM_CS_2)==-1){
+      Serial.print("Camera_2");
+      delay(500);
+    }
+  }
+}
+
+
+
+
+
+
 void trackball::mousecam_read_motion(struct MD *p, int pinSS)
 {
   // SPI.beginTransaction(settings_tBall);
