@@ -13,6 +13,9 @@ Respond to trackball and joystick
 #include "trackball.h"
 #include "syringePump.h"
 
+unsigned long LOOP_FREQ = 200;
+unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
+
 /////////////////////////////////////////////////////////
 // Trackball setup
 
@@ -24,10 +27,10 @@ trackball tBall;
 // Setup pins for uStepperS peripherals
 const byte selectPinX = 9;
 const byte selectPinY = 10;
-const byte resetPin = 8;
+const byte resetPin1 = 8;
+const byte resetPin2 = 7;
 const byte limitPinX = 0;
 const byte limitPinY = 1;
-int microDelay = 50;
 
 float PULLEY_RAD = 6.0; // mm
 
@@ -43,8 +46,6 @@ bool stageHomed = false;
 unsigned long timeSinceExec = 0;
 unsigned long timeNow;
 unsigned long timeLastExecution;
-unsigned long LOOP_FREQ = 1;
-unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
 
 
 ////////////////////////////////////////////////////////
@@ -60,7 +61,7 @@ LinAxis axisList[2] = {LinAxis(selectPinX, limitPinX), LinAxis(selectPinY, limit
 // Joystick also has button
 int joyPinX = A3;
 int joyPinY = A4;
-int joySwitch = 7;
+int joySwitch = 8;
 int joyValueX = 0;
 int joyValueY = 0;
 bool joyPressed = false;
@@ -95,17 +96,22 @@ void setup() {
   SPI.setBitOrder(MSBFIRST);
 
   // Set uStepperS reset pin
-  pinMode(resetPin, OUTPUT);
+  pinMode(resetPin1, OUTPUT);
+  pinMode(resetPin2, OUTPUT);
 
   // Reset uSteppers 
-  digitalWrite(resetPin, LOW);
-  delay(10);
-  digitalWrite(resetPin, HIGH);
+  digitalWrite(resetPin1, LOW);
+  digitalWrite(resetPin2, LOW);
+  delay(100);
+  digitalWrite(resetPin1, HIGH);
+  digitalWrite(resetPin2, HIGH);
 
   // Setup Joystick
   pinMode(joyPinX, INPUT);
   pinMode(joyPinY, INPUT);
   pinMode(joySwitch, INPUT_PULLUP);
+
+  delay(1000);
 
   // Initialise trackball cameras
   // tBall.init();
@@ -166,7 +172,7 @@ void intialPosition(){
   // Read encoder value from each motor. 
   for(auto &item : axisList){
     // For each motor, SPI transfer desired and true andgular positions
-    item.sendRecvFloat(item.selectPin, &item.dataOut, &item.dataIn);
+    item.sendRecvFloat(&item.dataOut, &item.dataIn);
     item.initEncoder = item.dataIn.fData;
   }
 }
@@ -261,7 +267,8 @@ void moveMotors(){
   // Iterate through list of uStepper objects
   for(auto &item : axisList){ 
     // For each motor, SPI transfer desired and true andgular positions
-    item.sendRecvFloat(item.selectPin, &item.dataOut, &item.dataIn);
+    item.sendRecvFloat(&item.dataOut, &item.dataIn);
+    Serial.println(&item.dataIn.fData);
   }
 }
 
@@ -300,22 +307,27 @@ void loop() {
     timeLastExecution = micros();  
   
 
-    // Update joyValX and joyValY
-    readJoystick();
-    // Map joystick to XY plane
-    mapJoystick();
+    // // Update joyValX and joyValY
+    // readJoystick();
+    // // Map joystick to XY plane
+    // mapJoystick();
 
-    // Get values from trackball
-    readTrackball();
+    // // Get values from trackball
+    // readTrackball();
     // Serial.print(tBall.x_mm); Serial.print("\t"); Serial.print(tBall.y_mm); Serial.print("\t"); Serial.println(tBall.yaw_deg);
 
     // Calc then send desired positions to respective stepper motors
     calcAngles(tBall.t_dx, tBall.t_dy);
+    axisList[0].dataOut.fData = 3.14;
+    axisList[1].dataOut.fData = 3.14/2.0;
     moveMotors();
     calcPosition(axisList[0].dataIn.fData, axisList[1].dataIn.fData);
+    Serial.println(axisList[0].dataIn.fData);
+    Serial.println(axisList[1].dataIn.fData);
+
 
     // Send out over serial
-    writeSerial();
+    // writeSerial();
     
   }
 }

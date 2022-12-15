@@ -7,18 +7,18 @@ LinAxis::LinAxis(uint8_t CS_Pin, uint8_t LM_Pin)//:  settingsSPI(1000000, MSBFIR
     pinMode(selectPin, OUTPUT);
     digitalWrite(selectPin, HIGH);
     limitPin = LM_Pin;
-    pinMode(selectPin, INPUT_PULLUP);
+    pinMode(limitPin, INPUT_PULLUP);
     dataIn.fData = 0.0;
     dataOut.fData = 0.0;
 }
 
 
 
-void LinAxis::sendRecvFloat(int pinSS, dataFloat *outData, dataFloat *inData)
+void LinAxis::sendRecvFloat(dataFloat *outData, dataFloat *inData)
 {
   // SPI.beginTransaction(settingsSPI);
   // take the select pin low to activate buffer
-  digitalWrite(pinSS, LOW);
+  digitalWrite(selectPin, LOW);
   
   //Send first byte and discard last byte that was sent (lastByte)
   // transfer first sends data on MOSI, then waits and receives from MISO
@@ -40,7 +40,7 @@ void LinAxis::sendRecvFloat(int pinSS, dataFloat *outData, dataFloat *inData)
     delayMicroseconds(microDelay); // delay between transmissions
   }
   // take the select pin high to de-select the chip:
-  digitalWrite(pinSS, HIGH);
+  digitalWrite(selectPin, HIGH);
   // SPI.endTransaction();
 }
 

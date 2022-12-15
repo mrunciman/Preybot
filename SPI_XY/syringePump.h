@@ -6,7 +6,7 @@ class LinAxis{
     #define ACTIVE 0
     #define CALIBRATING 1
 
-    int microDelay = 50;
+    int microDelay = 5;
 
 ///////////////////////////////////////////////////////////////////////////
 public:
@@ -47,6 +47,6 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
     // Functions
-    void sendRecvFloat(int pinSS, dataFloat *outData, dataFloat *inData);
+    void sendRecvFloat(dataFloat *outData, dataFloat *inData);
 
 };
