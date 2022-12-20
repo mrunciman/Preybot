@@ -1,7 +1,7 @@
-#include "syringePump.h"
+#include "linearAxis.h"
 
 
-LinAxis::LinAxis(uint8_t CS_Pin, uint8_t LM_Pin)//:  settingsSPI(1000000, MSBFIRST, SPI_MODE0)
+LinAxis::LinAxis(uint8_t CS_Pin, uint8_t LM_Pin):  settingsSPI(500000, MSBFIRST, SPI_MODE3)
 {
     selectPin = CS_Pin;
     pinMode(selectPin, OUTPUT);
@@ -16,7 +16,7 @@ LinAxis::LinAxis(uint8_t CS_Pin, uint8_t LM_Pin)//:  settingsSPI(1000000, MSBFIR
 
 void LinAxis::sendRecvFloat(dataFloat *outData, dataFloat *inData)
 {
-  // SPI.beginTransaction(settingsSPI);
+  SPI.beginTransaction(settingsSPI);
   // take the select pin low to activate buffer
   digitalWrite(selectPin, LOW);
   
@@ -41,7 +41,7 @@ void LinAxis::sendRecvFloat(dataFloat *outData, dataFloat *inData)
   }
   // take the select pin high to de-select the chip:
   digitalWrite(selectPin, HIGH);
-  // SPI.endTransaction();
+  SPI.endTransaction();
 }
 
 

@@ -25,7 +25,7 @@ public:
     dataFloat dataIn;
     dataFloat dataOut;
 
-    float angleIn;
+    // float angleIn;
     float initEncoder;
     float homeEncoder;
     float homeOffset;
@@ -44,6 +44,8 @@ public:
 
     byte firstByte = 0;
     byte lastByte = 255;
+
+    SPISettings settingsSPI;
 
     ////////////////////////////////////////////////////////////////////////////
     // Functions

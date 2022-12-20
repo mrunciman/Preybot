@@ -11,9 +11,9 @@ Respond to trackball and joystick
 
 #include <SPI.h>
 #include "trackball.h"
-#include "syringePump.h"
+#include "linearAxis.h"
 
-unsigned long LOOP_FREQ = 200;
+unsigned long LOOP_FREQ = 1;
 unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
 
 /////////////////////////////////////////////////////////
@@ -29,8 +29,8 @@ const byte selectPinX = 9;
 const byte selectPinY = 10;
 const byte resetPin1 = 8;
 const byte resetPin2 = 7;
-const byte limitPinX = 0;
-const byte limitPinY = 1;
+const byte limitPinX = 4;
+const byte limitPinY = 5;
 
 float PULLEY_RAD = 6.0; // mm
 
@@ -114,10 +114,10 @@ void setup() {
   delay(1000);
 
   // Initialise trackball cameras
-  // tBall.init();
+  tBall.init();
 
   // Initial encoder reading for position calcs
-  intialPosition();
+  // intialPosition();
 
   // Home stage by hitting X then Y limit switches
   // stageHomed = homeXYStage();
@@ -268,7 +268,7 @@ void moveMotors(){
   for(auto &item : axisList){ 
     // For each motor, SPI transfer desired and true andgular positions
     item.sendRecvFloat(&item.dataOut, &item.dataIn);
-    Serial.println(&item.dataIn.fData);
+    // Serial.println(&item.dataIn.fData);
   }
 }
 
@@ -313,24 +313,28 @@ void loop() {
     // mapJoystick();
 
     // // Get values from trackball
-    // readTrackball();
+    readTrackball();
     // Serial.print(tBall.x_mm); Serial.print("\t"); Serial.print(tBall.y_mm); Serial.print("\t"); Serial.println(tBall.yaw_deg);
 
     // Calc then send desired positions to respective stepper motors
     calcAngles(tBall.t_dx, tBall.t_dy);
-    axisList[0].dataOut.fData = 3.14;
-    axisList[1].dataOut.fData = 3.14/2.0;
     moveMotors();
     calcPosition(axisList[0].dataIn.fData, axisList[1].dataIn.fData);
-    Serial.println(axisList[0].dataIn.fData);
-    Serial.println(axisList[1].dataIn.fData);
-
 
     // Send out over serial
-    // writeSerial();
+    writeSerial();
     
   }
 }
+
+// const PROGMEM uint16_t SineLookup_5bits[32]
+// {
+//   500, 500, 500, 500, 500, 500, 500, 500,
+//   500, 500, 500, 500, 500, 500, 500, 500,
+//   500, 500, 500, 500, 500, 500, 500, 500,
+//   500, 500, 500, 500, 500, 500, 500, 500
+// };
+// pgm_read_word(&(SineLookup_5bits[i]))
 
 
 

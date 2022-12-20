@@ -11,7 +11,9 @@ union dataFloat{
   uint8_t bData[4];
 };
 
-float desiredAngle = 0.0;
+float deltaAngle = 0.0;
+
+float angPos = 0.0;
 
 volatile dataFloat posEncoder;
 volatile dataFloat posFromMega;
@@ -33,9 +35,9 @@ void setup(void)
   Serial.begin(115200);
   stepper.setup(CLOSEDLOOP,200);     //Initiate the stepper object to use closed loop control with 200 steps per revolution motor - i.e. 1.8 deg stepper 
   // Initialise data structures
-  posEncoder.fData = 3.14;// stepper.encoder.getAngleMoved();
+  posEncoder.fData = 0.0;// stepper.encoder.getAngleMoved();
   posFromMega.fData = 0.0;
-  // Serial.println("Start");
+  Serial.println("Start");
 
 
   
@@ -70,6 +72,7 @@ ISR (SPI_STC_vect){
     if (startMessage == false){
       char c = SPDR0;
       if (c == '<'){
+        // Serial.println("Start message");
         startMessage = true;
       }
       SPDR0 = 0;
@@ -84,7 +87,6 @@ ISR (SPI_STC_vect){
         SPDR0 = 0;
         posIndex = 0;
         process_it = true;
-        // prevSelectState = 1;
       }
       else if(endMessage == false){ 
         // Prevent extra bytes being appended if Controller sends
@@ -108,22 +110,22 @@ ISR (SPI_STC_vect){
 void loop(void)
 {
 
+  // Motor chip select has been deselected
   if (digitalRead(SS_Pin)==HIGH){
     prevSelectState = 0;
     startMessage = false;
     endMessage = false;
     posIndex = 0;
   }
+
  
   // If end byte was received, process data
   if (process_it){
-    // Serial.print("From controller: ");
-    // Serial.println(posFromMega.fData);
-    // Serial.print("Desired angle: ");  
-    // Serial.println(desiredAngle);
-    // Serial.print("From encoder: ");
-    // Serial.println(posEncoder.fData);
-    // Serial.println();
+    Serial.print("Change in angle: ");  
+    Serial.println(deltaAngle);
+    Serial.print("From encoder: ");
+    Serial.println(posEncoder.fData);
+    Serial.println();
 
     posEncoder.fData = stepper.encoder.getAngleMoved();
     // Serial.println(posEncoder.bData[2], DEC);
@@ -131,8 +133,9 @@ void loop(void)
     // If both start and end messages received correctly,
     // move to position received from controller
     if (startMessage && endMessage){
-      desiredAngle = posFromMega.fData;
-      stepper.moveAngle(desiredAngle);
+      deltaAngle = posFromMega.fData;
+      angPos = posEncoder.fData + deltaAngle;
+      stepper.moveToAngle(angPos);
       // Clear message flags so that any one message
       // will only move the motor once.
       startMessage = false;
