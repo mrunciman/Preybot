@@ -427,17 +427,17 @@ void loop()
   // // Send desired positions to respective stepper motors
   posToX.fData = posToX.fData - 1;
   Serial.print("Desired X position: ");
-  Serial.println(posToX.fData);
+  Serial.print(posToX.fData); Serial.print("\t");
   stepExchange2(selectPinX, &posToX, &posEncX);
   Serial.print("Measured angle X: ");
-  Serial.println(posEncX.fData);
+  Serial.print(posEncX.fData); Serial.print("\t");
  
   posToY.fData = posToY.fData + 1;
   Serial.print("Desired Y position: ");
-  Serial.println(posToY.fData);
+  Serial.print(posToY.fData); Serial.print("\t");
   stepExchange2(selectPinY, &posToY, &posEncY);
   Serial.print("Measured angle Y: ");   
-  Serial.println(posEncY.fData);
+  Serial.print(posEncY.fData); Serial.print("\t");
 
   Serial.println();
   delay(5);
