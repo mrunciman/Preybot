@@ -20,19 +20,23 @@ unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
 // Trackball setup
 
 // instantiate trackball object "tBall"
-// trackball tBall;
+trackball tBall;
 
 
 //////////////////////////////////////////////////////////
 // Setup pins for uStepperS peripherals
 int selectPinX = 9;
 int selectPinY = 10;
-int selectPinZ = 11;
-int selectPinP = 12;
+// #define PIN_MOUSECAM_CS_1        11
+// #define PIN_MOUSECAM_CS_2        12
+// int selectPinZ = 11;
+// int selectPinP = 12;
+// #define PIN_MOUSECAM_RESET_1     3
+// #define PIN_MOUSECAM_RESET_2     5
 int resetPin1 = 8;
 int resetPin2 = 7;
-int limitPinX = 4;
-int limitPinY = 5;
+int limitPinX = 0;
+int limitPinY = 1;
 
 float PULLEY_RAD = 6.0; // mm
 
@@ -66,7 +70,7 @@ LinAxis axisList[2] = {LinAxis(), LinAxis()};
 // Joystick also has button
 int joyPinX = A3;
 int joyPinY = A4;
-int joySwitch = 8;
+int joySwitch = 6;
 int joyValueX = 0;
 int joyValueY = 0;
 bool joyPressed = false;
@@ -92,8 +96,6 @@ void setup() {
   axisList[0].init(selectPinX, limitPinX);
   axisList[1].init(selectPinY, limitPinY);
   Serial.println("Start XY Stage");
-  Serial.println(axisList[0].dataIn.fData);
-  Serial.println(axisList[1].dataIn.fData);
   
   // set the peripheral select pins as output:
   pinMode(SS, OUTPUT);
@@ -105,10 +107,11 @@ void setup() {
   SPI.setDataMode(SPI_MODE3);
   SPI.setBitOrder(MSBFIRST);
 
-  pinMode(selectPinZ, OUTPUT);
-  pinMode(selectPinP, OUTPUT);
-  digitalWrite(selectPinZ, HIGH);
-  digitalWrite(selectPinP, HIGH);
+  // Mode setting and writing done in tBall.init()
+  // pinMode(selectPinZ, OUTPUT);
+  // pinMode(selectPinP, OUTPUT);
+  // digitalWrite(selectPinZ, HIGH);
+  // digitalWrite(selectPinP, HIGH);
 
   // Set uStepperS reset pin
   pinMode(resetPin1, OUTPUT);
@@ -129,7 +132,7 @@ void setup() {
   delay(1000);
 
   // Initialise trackball cameras
-  // tBall.init();
+  tBall.init();
 
   // Initial encoder reading for position calcs
   // intialPosition();
@@ -166,19 +169,19 @@ void mapJoystick(){
 
 
 // Trackball //
-// void readTrackball(){
-//   tBall.mousecam_read_motion(&tBall.md_1, PIN_MOUSECAM_CS_1);
-//   tBall.mousecam_read_motion(&tBall.md_2, PIN_MOUSECAM_CS_2);  
-//   tBall.xTranslation();
-//   tBall.yTranslation();
-//   tBall.yawAngle();
-// }
+void readTrackball(){
+  tBall.mousecam_read_motion(&tBall.md_1, PIN_MOUSECAM_CS_1);
+  tBall.mousecam_read_motion(&tBall.md_2, PIN_MOUSECAM_CS_2);  
+  tBall.xTranslation();
+  tBall.yTranslation();
+  tBall.yawAngle();
+}
 
 
-// void transformtBall(){
-//   tBall.t_dx = tBall.x_mm;
-//   tBall.t_dy = tBall.y_mm;
-// }
+void transformtBall(){
+  tBall.t_dx = tBall.x_mm;
+  tBall.t_dy = tBall.y_mm;
+}
 
 
 // uSteppers / XY Stage //
@@ -230,7 +233,7 @@ bool homeY(){
   float dy = -1.0;
   calcAngles(dx, dy); // sets dAngle1 dAngle2
   // read current position of motor, to then decrement it
-  while(digitalRead(axisList[1].limitPin) == LOW){ // CHANGE TO HIGH FOR WHEN USING INTERNAL PULLUPS
+  while(digitalRead(axisList[1].limitPin) == LOW){ // CHANGE TO HIGH WHEN USING INTERNAL PULLUPS
     moveMotors();
   }  
   axisList[1].homeEncoder = axisList[1].dataIn.fData;
@@ -337,25 +340,17 @@ void loop() {
     // mapJoystick();
 
     // // Get values from trackball
-    // readTrackball();
+    readTrackball();
     // Serial.print(tBall.x_mm); Serial.print("\t"); Serial.print(tBall.y_mm); Serial.print("\t"); Serial.println(tBall.yaw_deg);
 
     // Calc then send desired positions to respective stepper motors
-    // calcAngles(tBall.t_dx, tBall.t_dy);
-    calcAngles(1, 0);
-    // axisList[0].dataOut.fData = 3.14;
-    // axisList[1].dataOut.fData = 1.57;
-    Serial.println();
-    Serial.println(axisList[0].dataOut.fData);
-    Serial.println(axisList[1].dataOut.fData);
+    calcAngles(tBall.t_dx, tBall.t_dy);
+    // calcAngles(1, 0);  dummy value for debugging
     moveMotors();
-
     // Calculate true position based on encoder values
     angPosX = axisList[0].dataIn.fData;
     angPosY = axisList[1].dataIn.fData;
-    Serial.println(angPosX);
-    Serial.println(angPosY);
-    // calcPosition(angPosX, angPosY);
+    calcPosition(angPosX, angPosY);
 
     // Send out over serial
     writeSerial();
