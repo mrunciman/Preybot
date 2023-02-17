@@ -13,27 +13,31 @@ Respond to trackball and joystick
 #include "trackball.h"
 #include "linearAxis.h"
 
-unsigned long LOOP_FREQ = 1;
+unsigned long LOOP_FREQ = 50; // Hz
 unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
 
 /////////////////////////////////////////////////////////
 // Trackball setup
 
 // instantiate trackball object "tBall"
-trackball tBall;
+// trackball tBall;
 
 
 //////////////////////////////////////////////////////////
 // Setup pins for uStepperS peripherals
-const byte selectPinX = 9;
-const byte selectPinY = 10;
-const byte resetPin1 = 8;
-const byte resetPin2 = 7;
-const byte limitPinX = 4;
-const byte limitPinY = 5;
+int selectPinX = 9;
+int selectPinY = 10;
+int selectPinZ = 11;
+int selectPinP = 12;
+int resetPin1 = 8;
+int resetPin2 = 7;
+int limitPinX = 4;
+int limitPinY = 5;
 
 float PULLEY_RAD = 6.0; // mm
 
+float angPosX = 0.0;
+float angPosY = 0.0;
 float posX = 0.0;
 float posY = 0.0;
 int FLOAT_LEN = 9;
@@ -51,7 +55,8 @@ unsigned long timeLastExecution;
 ////////////////////////////////////////////////////////
 // uStepper data structures
 
-LinAxis axisList[2] = {LinAxis(selectPinX, limitPinX), LinAxis(selectPinY, limitPinY)};
+// LinAxis axisList[2] = {LinAxis(selectPinX, limitPinX), LinAxis(selectPinY, limitPinY)};
+LinAxis axisList[2] = {LinAxis(), LinAxis()};
 
 
 ////////////////////////////////////////////////////////
@@ -82,8 +87,13 @@ unsigned long writeTime;
 // Setup
 
 void setup() {
+
   Serial.begin(115200);
+  axisList[0].init(selectPinX, limitPinX);
+  axisList[1].init(selectPinY, limitPinY);
   Serial.println("Start XY Stage");
+  Serial.println(axisList[0].dataIn.fData);
+  Serial.println(axisList[1].dataIn.fData);
   
   // set the peripheral select pins as output:
   pinMode(SS, OUTPUT);
@@ -94,6 +104,11 @@ void setup() {
   SPI.setClockDivider(SPI_CLOCK_DIV32);
   SPI.setDataMode(SPI_MODE3);
   SPI.setBitOrder(MSBFIRST);
+
+  pinMode(selectPinZ, OUTPUT);
+  pinMode(selectPinP, OUTPUT);
+  digitalWrite(selectPinZ, HIGH);
+  digitalWrite(selectPinP, HIGH);
 
   // Set uStepperS reset pin
   pinMode(resetPin1, OUTPUT);
@@ -114,7 +129,7 @@ void setup() {
   delay(1000);
 
   // Initialise trackball cameras
-  tBall.init();
+  // tBall.init();
 
   // Initial encoder reading for position calcs
   // intialPosition();
@@ -151,19 +166,19 @@ void mapJoystick(){
 
 
 // Trackball //
-void readTrackball(){
-  tBall.mousecam_read_motion(&tBall.md_1, PIN_MOUSECAM_CS_1);
-  tBall.mousecam_read_motion(&tBall.md_2, PIN_MOUSECAM_CS_2);  
-  tBall.xTranslation();
-  tBall.yTranslation();
-  tBall.yawAngle();
-}
+// void readTrackball(){
+//   tBall.mousecam_read_motion(&tBall.md_1, PIN_MOUSECAM_CS_1);
+//   tBall.mousecam_read_motion(&tBall.md_2, PIN_MOUSECAM_CS_2);  
+//   tBall.xTranslation();
+//   tBall.yTranslation();
+//   tBall.yawAngle();
+// }
 
 
-void transformtBall(){
-  tBall.t_dx = tBall.x_mm;
-  tBall.t_dy = tBall.y_mm;
-}
+// void transformtBall(){
+//   tBall.t_dx = tBall.x_mm;
+//   tBall.t_dy = tBall.y_mm;
+// }
 
 
 // uSteppers / XY Stage //
@@ -171,7 +186,7 @@ void transformtBall(){
 void intialPosition(){
   // Read encoder value from each motor. 
   for(auto &item : axisList){
-    // For each motor, SPI transfer desired and true andgular positions
+    // For each motor, SPI transfer desired and true angular positions
     item.sendRecvFloat(&item.dataOut, &item.dataIn);
     item.initEncoder = item.dataIn.fData;
   }
@@ -181,9 +196,11 @@ void intialPosition(){
 bool homeXYStage(){
   bool xHomed = false;
   bool yHomed = false;
+  Serial.println("Homing X axis...");
   xHomed = homeX();
+  Serial.println("Homing Y axis...");
   yHomed = homeY();
-  return true;
+  return true; // For test purposes return true
 }
 
 
@@ -193,11 +210,12 @@ bool homeX(){
   float dy = 0.0;
   calcAngles(dx, dy); // sets dAngle1 dAngle2
   // read current position of motor, to then decrement it
-  while(digitalRead(axisList[0].limitPin) == HIGH){
+  while(digitalRead(axisList[0].limitPin) == LOW){  // CHANGE TO HIGH FOR WHEN USING INTERNAL PULLUPS
     moveMotors();
   }
   axisList[0].homeEncoder = axisList[0].dataIn.fData;
   axisList[0].homeOffset = axisList[0].homeEncoder - axisList[0].initEncoder;
+  Serial.println(axisList[0].homeOffset);
   dx = 5.0;
   dy = 0.0;
   calcAngles(dx, dy); // sets dAngle1 dAngle2
@@ -212,11 +230,12 @@ bool homeY(){
   float dy = -1.0;
   calcAngles(dx, dy); // sets dAngle1 dAngle2
   // read current position of motor, to then decrement it
-  while(digitalRead(axisList[1].limitPin) == HIGH){
+  while(digitalRead(axisList[1].limitPin) == LOW){ // CHANGE TO HIGH FOR WHEN USING INTERNAL PULLUPS
     moveMotors();
   }  
   axisList[1].homeEncoder = axisList[1].dataIn.fData;
   axisList[1].homeOffset = axisList[1].homeEncoder - axisList[1].initEncoder;
+  Serial.println(axisList[0].homeOffset);
   dx = 0.0;
   dy = 5.0;
   calcAngles(dx, dy); // sets dAngle1 dAngle2
@@ -238,6 +257,10 @@ void calcAngles(float dx, float dy){
   dAngle1 = delta1/PULLEY_RAD;
   dAngle2 = delta2/PULLEY_RAD;
 
+  // Serial.println("Angles");
+  // Serial.println(dAngle1);
+  // Serial.println(dAngle2);
+
   // Set the changes in angle
   axisList[0].dataOut.fData = dAngle1;
   axisList[1].dataOut.fData = dAngle2;
@@ -246,8 +269,10 @@ void calcAngles(float dx, float dy){
 
 // Calculate XY position of stage from motor angles
 void calcPosition(float angle1, float angle2){
-  posX = (angle1 - axisList[0].homeOffset)*PULLEY_RAD;  
+  posX = (angle1 - axisList[0].homeOffset)*PULLEY_RAD;  // homeOffsest values unintitialised
   posY = (angle2 - axisList[1].homeOffset)*PULLEY_RAD;
+  // Serial.println(posX);
+  // Serial.println(posY);
 }
 
 
@@ -266,9 +291,8 @@ void setPosition(float desX, float desY){
 void moveMotors(){
   // Iterate through list of uStepper objects
   for(auto &item : axisList){ 
-    // For each motor, SPI transfer desired and true andgular positions
+    // For each motor, SPI transfer desired and true angular positions
     item.sendRecvFloat(&item.dataOut, &item.dataIn);
-    // Serial.println(&item.dataIn.fData);
   }
 }
 
@@ -300,7 +324,7 @@ void writeSerial(){
 
 void loop() {
 
-  // Check if sampling period has been 
+  // Check if sampling period has been reached
   timeNow = micros();
   timeSinceExec = timeNow - timeLastExecution;
   if (timeSinceExec >= LOOP_PERIOD_MICRO){
@@ -313,16 +337,29 @@ void loop() {
     // mapJoystick();
 
     // // Get values from trackball
-    readTrackball();
+    // readTrackball();
     // Serial.print(tBall.x_mm); Serial.print("\t"); Serial.print(tBall.y_mm); Serial.print("\t"); Serial.println(tBall.yaw_deg);
 
     // Calc then send desired positions to respective stepper motors
-    calcAngles(tBall.t_dx, tBall.t_dy);
+    // calcAngles(tBall.t_dx, tBall.t_dy);
+    calcAngles(1, 0);
+    // axisList[0].dataOut.fData = 3.14;
+    // axisList[1].dataOut.fData = 1.57;
+    Serial.println();
+    Serial.println(axisList[0].dataOut.fData);
+    Serial.println(axisList[1].dataOut.fData);
     moveMotors();
-    calcPosition(axisList[0].dataIn.fData, axisList[1].dataIn.fData);
+
+    // Calculate true position based on encoder values
+    angPosX = axisList[0].dataIn.fData;
+    angPosY = axisList[1].dataIn.fData;
+    Serial.println(angPosX);
+    Serial.println(angPosY);
+    // calcPosition(angPosX, angPosY);
 
     // Send out over serial
     writeSerial();
+
     
   }
 }

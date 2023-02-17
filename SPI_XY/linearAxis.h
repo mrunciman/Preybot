@@ -1,34 +1,39 @@
 #include <SPI.h>
 
+typedef union {
+  float fData;
+  uint8_t bData[4];
+}dataFloat;
 
 class LinAxis{
 
     #define ACTIVE 0
     #define CALIBRATING 1
 
-    int microDelay = 5;
 
 ///////////////////////////////////////////////////////////////////////////
 public:
-    LinAxis(uint8_t CS_Pin, uint8_t LM_Pin);
-    uint8_t selectPin;
-    uint8_t limitPin;
+    // Constructor
+    LinAxis(); //uint8_t CS_Pin, uint8_t LM_Pin
+
+    int selectPin;
+    int limitPin;
 
     /////////////////////////////////////////////////////////////////////////
     // Variables for pressure and position data
 
-    union dataFloat{
-        float fData;
-        uint8_t bData[4];
-    };
+    // union dataFloat{
+    //   float fData;
+    //   uint8_t bData[4];
+    // };
 
     dataFloat dataIn;
     dataFloat dataOut;
 
     // float angleIn;
-    float initEncoder;
-    float homeEncoder;
-    float homeOffset;
+    float initEncoder = 0.0;
+    float homeEncoder = 0.0;
+    float homeOffset = 0.0;
 
     int stepCount = 0;
     int motorState = 0;
@@ -47,8 +52,11 @@ public:
 
     SPISettings settingsSPI;
 
+    int microDelay = 25;
+
     ////////////////////////////////////////////////////////////////////////////
     // Functions
+    void init(int CS_Pin, int LM_Pin);
     void sendRecvFloat(dataFloat *outData, dataFloat *inData);
 
 };

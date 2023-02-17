@@ -1,17 +1,22 @@
 #include "linearAxis.h"
 
 
-LinAxis::LinAxis(uint8_t CS_Pin, uint8_t LM_Pin):  settingsSPI(500000, MSBFIRST, SPI_MODE3)
+LinAxis::LinAxis():  settingsSPI(500000, MSBFIRST, SPI_MODE3) 
 {
-    selectPin = CS_Pin;
-    pinMode(selectPin, OUTPUT);
-    digitalWrite(selectPin, HIGH);
-    limitPin = LM_Pin;
-    pinMode(limitPin, INPUT_PULLUP);
-    dataIn.fData = 0.0;
-    dataOut.fData = 0.0;
+
 }
 
+
+void LinAxis::init(int CS_Pin, int LM_Pin)
+{    
+  selectPin = CS_Pin;
+  limitPin = LM_Pin;
+  pinMode(selectPin, OUTPUT);
+  digitalWrite(selectPin, HIGH);
+  pinMode(limitPin, INPUT_PULLUP);
+  dataIn.fData = 0.0;
+  dataOut.fData = 0.0;
+}
 
 
 void LinAxis::sendRecvFloat(dataFloat *outData, dataFloat *inData)
@@ -22,9 +27,12 @@ void LinAxis::sendRecvFloat(dataFloat *outData, dataFloat *inData)
   
   //Send first byte and discard last byte that was sent (lastByte)
   // transfer first sends data on MOSI, then waits and receives from MISO
-  firstByte = SPI.transfer(firstOut);
+
+  // firstByte should be 0 sent by motor at end of SPI interrupt
+  firstByte = SPI.transfer(firstOut); 
   delayMicroseconds(microDelay);
 
+  // firstByte will now be 0 from start of SPI interrupt on motor
   firstByte = SPI.transfer(outData->bData[0]);
   delayMicroseconds(microDelay);
   for (int i = 0; i < 4; i++){
@@ -35,13 +43,14 @@ void LinAxis::sendRecvFloat(dataFloat *outData, dataFloat *inData)
     else if (i == 3){
       // Send placeholder last byte and receive byte 4
       inData->bData[i] = SPI.transfer(lastOut);
-      delayMicroseconds(microDelay);
     }
     delayMicroseconds(microDelay); // delay between transmissions
   }
   // take the select pin high to de-select the chip:
   digitalWrite(selectPin, HIGH);
+  // delayMicroseconds(microDelay);
   SPI.endTransaction();
+  // inData->fData = 6.28;
 }
 
 
