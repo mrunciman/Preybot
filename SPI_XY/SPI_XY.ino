@@ -13,7 +13,7 @@ Respond to trackball and joystick
 #include "trackball.h"
 #include "linearAxis.h"
 
-unsigned long LOOP_FREQ = 50; // Hz
+unsigned long LOOP_FREQ = 100; // Hz
 unsigned long LOOP_PERIOD_MICRO = round(1000000/LOOP_FREQ);
 
 /////////////////////////////////////////////////////////
@@ -132,7 +132,7 @@ void setup() {
   delay(1000);
 
   // Initialise trackball cameras
-  tBall.init();
+  // tBall.init();
 
   // Initial encoder reading for position calcs
   // intialPosition();
@@ -345,7 +345,7 @@ void loop() {
 
     // Calc then send desired positions to respective stepper motors
     calcAngles(tBall.t_dx, tBall.t_dy);
-    // calcAngles(1, 0);  dummy value for debugging
+    // calcAngles(1, 0);  //dummy value for debugging
     moveMotors();
     // Calculate true position based on encoder values
     angPosX = axisList[0].dataIn.fData;
